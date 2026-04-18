@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AquaWatch — Ahmedabad Water Monitor</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:       #1a1d2e;
+  --bg2:      #232638;
+  --bg3:      #2a2d42;
+  --surface:  #2e3248;
+  --border:   #383c57;
+  --text:     #e8eaf6;
+  --text2:    #8f93b8;
+  --text3:    #5a5f80;
+  --pink:     #ff2d78;
+  --pink2:    rgba(255,45,120,0.18);
+  --pink3:    rgba(255,45,120,0.08);
+  --cyan:     #00d4ff;
+  --cyan2:    rgba(0,212,255,0.18);
+  --burst:    #ff4d6a;
+  --seep:     #ffcc00;
+  --illegal:  #b44dff;
+  --tamper:   #ff8c1a;
+  --safe:     #00e5a0;
+  --nav-w:    220px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{
+  font-family:'DM Sans',sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  min-height:100vh;
+  display:flex;
+  overflow:hidden;
+}
+
+/* ========= LEFT NAV ========= */
+.sidenav {
+  width: var(--nav-w);
+  min-height: 100vh;
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  z-index: 100;
+}
+.nav-logo {
+  padding: 22px 20px 18px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.nav-logo-icon {
+  width: 36px; height: 36px;
+  background: linear-gradient(135deg, var(--pink), #ff6eb0);
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 17px;
+  box-shadow: 0 0 18px rgba(255,45,120,0.35);
+}
+.nav-logo-name { font-size: 17px; font-weight: 700; letter-spacing: -0.4px; }
+.nav-logo-sub { font-size: 10px; color: var(--text3); font-family:'JetBrains Mono',monospace; margin-top: 1px; letter-spacing:.5px; }
+
+.nav-section-label {
+  padding: 18px 20px 6px;
+  font-size: 10px; color: var(--text3);
+  text-transform: uppercase; letter-spacing: 1.2px;
+  font-family: 'JetBrains Mono', monospace;
+}
+.nav-item {
+  display: flex; align-items: center; gap: 11px;
+  padding: 11px 20px; cursor: pointer;
+  font-size: 13.5px; font-weight: 500;
+  color: var(--text2);
+  border: none; background: transparent;
+  width: 100%; text-align: left;
+  position: relative;
+  transition: color .15s;
+  border-radius: 0;
+}
+.nav-item:hover { color: var(--text); background: rgba(255,255,255,0.04); }
+.nav-item.active {
+  color: var(--text);
+  background: linear-gradient(90deg, rgba(255,45,120,0.12), transparent);
+}
+.nav-item.active::before {
+  content: '';
+  position: absolute; left: 0; top: 50%;
+  transform: translateY(-50%);
+  width: 3px; height: 60%;
+  background: var(--pink);
+  border-radius: 0 3px 3px 0;
+}
+.nav-icon { width: 18px; text-align: center; font-size: 15px; opacity: .85; }
+.nav-badge {
+  margin-left: auto;
+  background: var(--pink);
+  color: #fff;
+  border-radius: 20px;
+  font-size: 10px; font-weight: 700;
+  padding: 2px 7px;
+  font-family: 'JetBrains Mono', monospace;
+  box-shadow: 0 0 10px rgba(255,45,120,0.4);
+}
+
+.nav-bottom {
+  margin-top: auto;
+  padding: 16px 20px;
+  border-top: 1px solid var(--border);
+}
+.nav-live {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 11px; color: var(--text3);
+  font-family: 'JetBrains Mono', monospace;
+}
+.pulse-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--safe);
+  animation: pd 2s infinite;
+  flex-shrink: 0;
+}
+@keyframes pd { 0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(0,229,160,.4)} 50%{opacity:.7;box-shadow:0 0 0 5px rgba(0,229,160,0)} }
+
+/* ========= MAIN CONTENT ========= */
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+/* ========= TOP BAR ========= */
+.topbar {
+  display: flex; align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  height: 56px;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  gap: 16px;
+}
+.topbar-title { font-size: 15px; font-weight: 600; }
+.topbar-sub { font-size: 12px; color: var(--text3); margin-top: 1px; }
+.topbar-actions { display: flex; align-items: center; gap: 8px; }
+.view-btn {
+  width: 34px; height: 34px;
+  border-radius: 8px;
+  background: var(--bg3); border: 1px solid var(--border);
+  color: var(--text2); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; transition: all .15s;
+}
+.view-btn:hover { border-color: var(--pink); color: var(--pink); }
+.view-btn.active { background: var(--pink); border-color: var(--pink); color: #fff; box-shadow: 0 0 12px rgba(255,45,120,.35); }
+
+/* ========= STAT CARDS ROW ========= */
+.stat-row {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg2);
+  flex-shrink: 0;
+}
+.stat-card {
+  padding: 16px 20px;
+  border-right: 1px solid var(--border);
+  display: flex; align-items: center; gap: 14px;
+  position: relative; overflow: hidden;
+}
+.stat-card:last-child { border-right: none; }
+.stat-card-icon {
+  width: 42px; height: 42px;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; flex-shrink: 0;
+}
+.stat-card-body { flex: 1; min-width: 0; }
+.stat-num {
+  font-size: 24px; font-weight: 700;
+  line-height: 1; letter-spacing: -0.5px;
+  display: flex; align-items: baseline; gap: 4px;
+}
+.stat-unit { font-size: 13px; font-weight: 400; color: var(--text2); }
+.stat-label {
+  font-size: 10px; color: var(--text3);
+  text-transform: uppercase; letter-spacing: .9px;
+  font-family: 'JetBrains Mono', monospace;
+  margin-top: 4px;
+}
+.stat-bar {
+  position: absolute; bottom: 0; left: 0; right: 0; height: 2px;
+  background: var(--border);
+}
+.stat-bar-fill { height: 100%; border-radius: 0; }
+
+/* Fuel gauge card */
+.stat-gauge {
+  position: relative; width: 54px; height: 54px; flex-shrink: 0;
+}
+.stat-gauge svg { transform: rotate(-135deg); }
+.gauge-pct {
+  position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%,-50%);
+  font-size: 14px; font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--pink);
+}
+
+/* ========= MAP AREA ========= */
+.map-area {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+#map { width: 100%; height: 100%; }
+
+/* Search bar overlay */
+.map-search-bar {
+  position: absolute; top: 12px; left: 12px; z-index: 900;
+  display: flex; align-items: center; gap: 8px;
+  background: rgba(26,29,46,0.88);
+  border: 1px solid var(--border);
+  border-radius: 8px; padding: 8px 12px;
+  backdrop-filter: blur(10px);
+  width: 280px;
+}
+.map-search-bar svg { color: var(--text3); flex-shrink: 0; }
+.map-search-bar input {
+  background: transparent; border: none; outline: none;
+  color: var(--text); font-size: 13px;
+  font-family: 'DM Sans', sans-serif; width: 100%;
+}
+.map-search-bar input::placeholder { color: var(--text3); }
+
+/* Legend panel */
+.map-legend {
+  position: absolute; top: 62px; left: 12px; z-index: 900;
+  background: rgba(26,29,46,0.88);
+  border: 1px solid var(--border); border-radius: 10px;
+  padding: 12px 14px; backdrop-filter: blur(10px);
+  min-width: 170px;
+}
+.legend-title {
+  font-size: 10px; color: var(--text3);
+  text-transform: uppercase; letter-spacing: 1px;
+  font-family: 'JetBrains Mono', monospace;
+  margin-bottom: 10px;
+}
+.legend-row { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; font-size: 12px; color: var(--text2); }
+.legend-row:last-child { margin-bottom: 0; }
+.l-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.l-line { width: 22px; height: 3px; border-radius: 2px; flex-shrink: 0; }
+.l-sep { height: 1px; background: var(--border); margin: 8px 0; }
+
+/* Info panel - top right */
+.map-info {
+  position: absolute; top: 12px; right: 12px; z-index: 900;
+  background: rgba(26,29,46,0.88);
+  border: 1px solid var(--border); border-radius: 10px;
+  padding: 14px 16px; backdrop-filter: blur(10px);
+  width: 220px;
+}
+.info-title {
+  font-size: 10px; color: var(--text3);
+  text-transform: uppercase; letter-spacing: 1px;
+  font-family: 'JetBrains Mono', monospace;
+  margin-bottom: 12px;
+}
+.info-row {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 8px; font-size: 12px;
+}
+.info-row:last-child { margin-bottom: 0; }
+.info-label { color: var(--text2); }
+.info-val { font-family: 'JetBrains Mono', monospace; font-weight: 600; }
+
+/* ========= PAGES ========= */
+.page { display: none; flex: 1; overflow: hidden; flex-direction: column; }
+.page.active { display: flex; }
+
+/* ========= ALERTS PAGE ========= */
+.alerts-page-inner { flex: 1; overflow-y: auto; padding: 24px; }
+.section-header { margin-bottom: 20px; }
+.section-header h2 { font-size: 20px; font-weight: 700; }
+.section-header p { font-size: 13px; color: var(--text2); margin-top: 3px; }
+.zone-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(150px,1fr));
+  gap: 10px; margin-bottom: 24px;
+}
+.zone-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; padding: 14px 16px;
+  transition: border-color .2s;
+}
+.zone-card:hover { border-color: var(--pink); }
+.zone-name { font-size: 11px; color: var(--text3); font-family:'JetBrains Mono',monospace; margin-bottom: 4px; }
+.zone-loss { font-size: 22px; font-weight: 700; color: var(--cyan); }
+.zone-unit { font-size: 11px; color: var(--text3); margin-top: 2px; }
+.zone-bar { height: 2px; background: var(--border); border-radius: 1px; margin-top: 10px; overflow: hidden; }
+.zone-bar-fill { height: 100%; border-radius: 1px; background: var(--cyan); }
+.alerts-grid { display: grid; grid-template-columns: 1fr 260px; gap: 16px; }
+.table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.filter-row { display: flex; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--border); align-items: center; }
+.filter-row label { font-size: 11px; color: var(--text3); font-family:'JetBrains Mono',monospace; }
+.filter-row select { background: var(--bg3); border: 1px solid var(--border); color: var(--text2); padding: 5px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; }
+.tbl { width: 100%; border-collapse: collapse; }
+.tbl th { padding: 9px 14px; font-size: 10px; color: var(--text3); text-align: left; text-transform: uppercase; letter-spacing:.8px; border-bottom: 1px solid var(--border); font-family:'JetBrains Mono',monospace; }
+.tbl td { padding: 9px 14px; font-size: 12.5px; color: var(--text2); border-bottom: 1px solid var(--border); }
+.tbl tr:last-child td { border-bottom: none; }
+.tbl tr:hover td { background: rgba(255,255,255,.02); }
+.badge { display: inline-flex; align-items: center; padding: 2px 7px; border-radius: 4px; font-size: 10px; font-weight: 700; font-family:'JetBrains Mono',monospace; }
+.badge-BURST { background: rgba(255,77,106,.15); color: var(--burst); }
+.badge-SEEP { background: rgba(255,204,0,.12); color: var(--seep); }
+.badge-ILLEGAL { background: rgba(180,77,255,.12); color: var(--illegal); }
+.badge-TAMPER { background: rgba(255,140,26,.12); color: var(--tamper); }
+.urg-HIGH { color: var(--burst); font-weight: 600; }
+.urg-MED { color: var(--tamper); }
+.urg-LOW { color: var(--text3); }
+.chart-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+.chart-title { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 1px; font-family:'JetBrains Mono',monospace; margin-bottom: 14px; }
+.chart-wrap { position: relative; height: 200px; }
+.chart-legend { margin-top: 12px; }
+.cl-item { display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: var(--text2); padding: 3px 0; }
+.cl-left { display: flex; align-items: center; gap: 7px; }
+.cl-dot { width: 8px; height: 8px; border-radius: 50%; }
+.cl-pct { font-family:'JetBrains Mono',monospace; color: var(--text); font-size: 11px; }
+
+/* ========= LEAFLET OVERRIDES ========= */
+.leaflet-container { background: #1a1d2e !important; }
+.leaflet-control-zoom { border: 1px solid var(--border) !important; border-radius: 8px !important; overflow: hidden; }
+.leaflet-control-zoom a { background: var(--bg2) !important; color: var(--text2) !important; border: none !important; border-bottom: 1px solid var(--border) !important; }
+.leaflet-control-zoom a:last-child { border-bottom: none !important; }
+.leaflet-control-zoom a:hover { background: var(--surface) !important; color: var(--text) !important; }
+.leaflet-popup-content-wrapper, .leaflet-popup-tip { background: transparent !important; box-shadow: none !important; padding: 0 !important; }
+.leaflet-popup-content { margin: 0 !important; }
+
+@keyframes pin-ring { 0%,100%{box-shadow:0 0 0 0 currentColor} 50%{box-shadow:0 0 0 7px transparent} }
+</style>
+</head>
+<body>
+
+<!-- ====== LEFT SIDEBAR ====== -->
+<nav class="sidenav">
+  <div class="nav-logo">
+    <div class="nav-logo-icon">💧</div>
+    <div>
+      <div class="nav-logo-name">AquaWatch</div>
+      <div class="nav-logo-sub">AHMEDABAD · v2</div>
+    </div>
+  </div>
+
+  <div class="nav-section-label">Navigation</div>
+  <button class="nav-item active" onclick="switchPage('map', this)">
+    <span class="nav-icon">🗺️</span> Dashboard
+    <span class="nav-badge" id="nav-badge">1</span>
+  </button>
+  <button class="nav-item" onclick="switchPage('alerts', this)">
+    <span class="nav-icon">🚨</span> Alerts
+    <span class="nav-badge" style="background:var(--burst)" id="alert-count">15</span>
+  </button>
+  <button class="nav-item" onclick="switchPage('map', this)">
+    <span class="nav-icon">📡</span> Sensors
+  </button>
+  <button class="nav-item" onclick="switchPage('map', this)">
+    <span class="nav-icon">🗂️</span> Zones
+  </button>
+  <button class="nav-item" onclick="switchPage('map', this)">
+    <span class="nav-icon">📅</span> Reports
+  </button>
+
+  <div class="nav-bottom">
+    <div class="nav-live">
+      <div class="pulse-dot"></div>
+      LIVE · <span id="clock">--:--:--</span>
+    </div>
+  </div>
+</nav>
+
+<!-- ====== MAIN ====== -->
+<div class="main">
+
+  <!-- ====== MAP PAGE ====== -->
+  <div id="map-page" class="page active">
+    <!-- Top bar -->
+    <div class="topbar">
+      <div>
+        <div class="topbar-title">Map View</div>
+        <div class="topbar-sub">Live water distribution network — Ahmedabad</div>
+      </div>
+      <div class="topbar-actions">
+        <button class="view-btn active" title="Map view">🗺️</button>
+        <button class="view-btn" title="List view">☰</button>
+        <button class="view-btn" title="Grid view">⊞</button>
+      </div>
+    </div>
+
+    <!-- Stat cards -->
+    <div class="stat-row">
+      <!-- Anomalies total -->
+      <div class="stat-card">
+        <div class="stat-card-icon" style="background:rgba(0,212,255,.12)">🔍</div>
+        <div class="stat-card-body">
+          <div class="stat-num" style="color:var(--cyan)" id="s-total">15</div>
+          <div class="stat-label">Total Anomalies</div>
+        </div>
+        <div class="stat-bar"><div class="stat-bar-fill" style="width:75%;background:var(--cyan)"></div></div>
+      </div>
+      <!-- BURST -->
+      <div class="stat-card">
+        <div class="stat-card-icon" style="background:rgba(255,77,106,.12)">💥</div>
+        <div class="stat-card-body">
+          <div class="stat-num" style="color:var(--burst)" id="s-burst">—</div>
+          <div class="stat-label">Pipe Bursts</div>
+        </div>
+        <div class="stat-bar"><div class="stat-bar-fill" id="b-bar" style="background:var(--burst)"></div></div>
+      </div>
+      <!-- Water loss -->
+      <div class="stat-card">
+        <div class="stat-card-icon" style="background:rgba(180,77,255,.12)">🌊</div>
+        <div class="stat-card-body">
+          <div class="stat-num" style="color:var(--illegal)">
+            <span id="s-loss">—</span><span class="stat-unit">kL</span>
+          </div>
+          <div class="stat-label">Est. Loss Today</div>
+        </div>
+        <div class="stat-bar"><div class="stat-bar-fill" style="width:65%;background:var(--illegal)"></div></div>
+      </div>
+      <!-- Avg response -->
+      <div class="stat-card">
+        <div class="stat-card-icon" style="background:rgba(255,140,26,.12)">⏱️</div>
+        <div class="stat-card-body">
+          <div class="stat-num" style="color:var(--tamper)">
+            14<span class="stat-unit">min</span>
+          </div>
+          <div class="stat-label">Avg Response Time</div>
+        </div>
+        <div class="stat-bar"><div class="stat-bar-fill" style="width:50%;background:var(--tamper)"></div></div>
+      </div>
+      <!-- Network health gauge -->
+      <div class="stat-card">
+        <div class="stat-gauge">
+          <svg width="54" height="54" viewBox="0 0 54 54">
+            <circle cx="27" cy="27" r="22" fill="none" stroke="var(--border)" stroke-width="4" stroke-dasharray="104 34"/>
+            <circle cx="27" cy="27" r="22" fill="none" stroke="var(--pink)" stroke-width="4" stroke-dasharray="85 53" stroke-linecap="round" style="filter:drop-shadow(0 0 6px var(--pink))"/>
+          </svg>
+          <div class="gauge-pct">82%</div>
+        </div>
+        <div class="stat-card-body">
+          <div class="stat-label">Network Health</div>
+          <div style="font-size:11px;color:var(--text2);margin-top:4px">Good condition</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Map -->
+    <div class="map-area">
+      <div id="map"></div>
+
+      <!-- Search bar -->
+      <div class="map-search-bar">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input type="text" placeholder="Search zone, sensor, segment…">
+      </div>
+
+      <!-- Legend -->
+      <div class="map-legend">
+        <div class="legend-title">Legend</div>
+        <div class="legend-row"><div class="l-line" style="background:var(--cyan)"></div> Main pipeline</div>
+        <div class="legend-row"><div class="l-line" style="background:var(--cyan);opacity:.4"></div> Branch line</div>
+        <div class="l-sep"></div>
+        <div class="legend-row"><div class="l-dot" style="background:var(--burst)"></div> BURST</div>
+        <div class="legend-row"><div class="l-dot" style="background:var(--seep)"></div> SEEP</div>
+        <div class="legend-row"><div class="l-dot" style="background:var(--illegal)"></div> ILLEGAL</div>
+        <div class="legend-row"><div class="l-dot" style="background:var(--tamper)"></div> TAMPER</div>
+        <div class="l-sep"></div>
+        <div style="font-size:10px;color:var(--text3)">Click pin for details</div>
+      </div>
+
+      <!-- Info panel -->
+      <div class="map-info">
+        <div class="info-title">Network Status</div>
+        <div class="info-row">
+          <span class="info-label">Active Sensors</span>
+          <span class="info-val" style="color:var(--safe)">341 / 350</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Zones Covered</span>
+          <span class="info-val" style="color:var(--cyan)">18</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Alerts Today</span>
+          <span class="info-val" style="color:var(--burst)" id="info-alerts">15</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">High Urgency</span>
+          <span class="info-val" style="color:var(--burst)" id="info-high">—</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Loss Today</span>
+          <span class="info-val" style="color:var(--illegal)" id="info-loss">—</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== ALERTS PAGE ====== -->
+  <div id="alerts-page" class="page">
+    <div class="topbar">
+      <div>
+        <div class="topbar-title">Anomaly Alerts</div>
+        <div class="topbar-sub">All detected water loss events across distribution network</div>
+      </div>
+    </div>
+    <div class="alerts-page-inner">
+      <div class="zone-grid" id="zone-cards"></div>
+      <div class="alerts-grid">
+        <div class="table-wrap">
+          <div class="filter-row">
+            <label>Zone</label>
+            <select id="filter-zone" onchange="renderTable()">
+              <option value="">All Zones</option>
+            </select>
+            <label style="margin-left:8px">Type</label>
+            <select id="filter-type" onchange="renderTable()">
+              <option value="">All Types</option>
+              <option>BURST</option><option>SEEP</option>
+              <option>ILLEGAL</option><option>TAMPER</option>
+            </select>
+          </div>
+          <table class="tbl">
+            <thead>
+              <tr>
+                <th>Time</th><th>Sensor</th><th>Zone</th>
+                <th>Segment</th><th>Type</th><th>Loss (L)</th><th>Urgency</th>
+              </tr>
+            </thead>
+            <tbody id="alerts-tbody"></tbody>
+          </table>
+        </div>
+        <div class="chart-panel">
+          <div class="chart-title">Loss by Zone</div>
+          <div class="chart-wrap"><canvas id="pieChart"></canvas></div>
+          <div class="chart-legend" id="chart-legend"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /main -->
+
+<script>
+// ===============================================================
+// DATA
+// ===============================================================
+const ALERTS = [
+  {time:"08:14",sensor:"S-101",zone:"Vasna",segment:"VAS-N2",type:"BURST",loss:4200,urgency:"HIGH",lat:23.0018,lng:72.5612},
+  {time:"08:31",sensor:"S-047",zone:"Naranpura",segment:"NAR-E1",type:"SEEP",loss:320,urgency:"LOW",lat:23.0603,lng:72.5643},
+  {time:"08:52",sensor:"S-218",zone:"Maninagar",segment:"MAN-S3",type:"ILLEGAL",loss:1100,urgency:"MED",lat:22.9950,lng:72.6012},
+  {time:"09:03",sensor:"S-305",zone:"Satellite",segment:"SAT-W1",type:"TAMPER",loss:780,urgency:"MED",lat:23.0330,lng:72.5130},
+  {time:"09:17",sensor:"S-112",zone:"Bopal",segment:"BOP-C2",type:"BURST",loss:5600,urgency:"HIGH",lat:23.0370,lng:72.4700},
+  {time:"09:29",sensor:"S-083",zone:"Vatva",segment:"VAT-E4",type:"ILLEGAL",loss:2200,urgency:"HIGH",lat:22.9680,lng:72.6450},
+  {time:"09:41",sensor:"S-196",zone:"Chandkheda",segment:"CHA-N1",type:"SEEP",loss:450,urgency:"LOW",lat:23.1150,lng:72.5880},
+  {time:"09:55",sensor:"S-274",zone:"Gota",segment:"GOT-W2",type:"TAMPER",loss:610,urgency:"MED",lat:23.0980,lng:72.5540},
+  {time:"10:08",sensor:"S-059",zone:"Nikol",segment:"NIK-S2",type:"BURST",loss:3800,urgency:"HIGH",lat:23.0438,lng:72.6523},
+  {time:"10:22",sensor:"S-341",zone:"Vastral",segment:"VAS-E3",type:"SEEP",loss:290,urgency:"LOW",lat:23.0097,lng:72.6780},
+  {time:"10:35",sensor:"S-177",zone:"Paldi",segment:"PAL-C1",type:"ILLEGAL",loss:1650,urgency:"MED",lat:23.0188,lng:72.5683},
+  {time:"10:49",sensor:"S-092",zone:"Thaltej",segment:"THA-N3",type:"TAMPER",loss:540,urgency:"LOW",lat:23.0536,lng:72.5060},
+  {time:"11:02",sensor:"S-230",zone:"Ghatlodia",segment:"GHA-N2",type:"BURST",loss:4900,urgency:"HIGH",lat:23.0826,lng:72.5540},
+  {time:"11:17",sensor:"S-158",zone:"Narol",segment:"NAR-S1",type:"SEEP",loss:380,urgency:"LOW",lat:22.9732,lng:72.6195},
+  {time:"11:29",sensor:"S-067",zone:"Isanpur",segment:"ISA-E2",type:"ILLEGAL",loss:1300,urgency:"MED",lat:22.9870,lng:72.6380},
+];
+
+const PIPELINES = {
+  main: [
+    [[23.1400,72.5650],[23.1150,72.5750],[23.0826,72.5680],[23.0603,72.5700],[23.0340,72.5714],[23.0100,72.5714],[22.9870,72.5750],[22.9680,72.5800],[22.9500,72.5850]],
+    [[23.0340,72.4600],[23.0340,72.5000],[23.0340,72.5714],[23.0340,72.6200],[23.0340,72.6800]],
+    [[23.1100,72.5550],[23.0900,72.5450],[23.0700,72.5400],[23.0500,72.5350],[23.0300,72.5300],[23.0100,72.5300]],
+  ],
+  branches: [
+    [[23.0340,72.5000],[23.0370,72.4700],[23.0250,72.4500]],
+    [[23.0340,72.5130],[23.0530,72.5060],[23.0700,72.5000]],
+    [[23.0340,72.6200],[23.0438,72.6523],[23.0097,72.6780]],
+    [[23.0340,72.6200],[22.9680,72.6450],[22.9870,72.6380]],
+    [[23.0826,72.5680],[23.0980,72.5540],[23.1150,72.5880]],
+    [[23.0603,72.5700],[23.0603,72.5200],[23.0536,72.5060]],
+    [[23.0100,72.5714],[23.0018,72.5612],[22.9732,72.6195]],
+    [[22.9870,72.5750],[22.9950,72.6012],[22.9732,72.6195]],
+    [[23.0188,72.5683],[22.9950,72.6012]],
+  ]
+};
+
+const TYPE_COLOR = {BURST:"#ff4d6a",SEEP:"#ffcc00",ILLEGAL:"#b44dff",TAMPER:"#ff8c1a"};
+
+// ===============================================================
+// CLOCK
+// ===============================================================
+function tick() {
+  const n = new Date();
+  document.getElementById('clock').textContent =
+    n.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+setInterval(tick, 1000); tick();
+
+// ===============================================================
+// PAGE SWITCH
+// ===============================================================
+function switchPage(p, btn) {
+  document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  document.getElementById(p+'-page').classList.add('active');
+  btn.classList.add('active');
+  if (p === 'alerts') renderAlerts();
+  if (p === 'map') setTimeout(() => map.invalidateSize(), 50);
+}
+
+// ===============================================================
+// STATS
+// ===============================================================
+let totalLoss = 0, burstCount = 0, highCount = 0;
+ALERTS.forEach(a => {
+  totalLoss += a.loss;
+  if (a.type === 'BURST') burstCount++;
+  if (a.urgency === 'HIGH') highCount++;
+});
+document.getElementById('s-total').textContent = ALERTS.length;
+document.getElementById('s-loss').textContent = (totalLoss/1000).toFixed(1);
+document.getElementById('s-burst').textContent = burstCount;
+document.getElementById('b-bar').style.width = Math.round(burstCount/ALERTS.length*100)+'%';
+document.getElementById('info-high').textContent = highCount;
+document.getElementById('info-loss').textContent = (totalLoss/1000).toFixed(1)+' kL';
+document.getElementById('alert-count').textContent = ALERTS.length;
+document.getElementById('nav-badge').textContent = '1';
+
+// ===============================================================
+// MAP
+// ===============================================================
+const map = L.map('map', { center:[23.0225,72.5714], zoom:12, zoomControl:true });
+
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
+  attribution:'© OpenStreetMap © CARTO', subdomains:'abcd', maxZoom:19
+}).addTo(map);
+
+// Pipelines
+PIPELINES.main.forEach(coords => {
+  L.polyline(coords, { color:'#00d4ff', weight:3, opacity:.9 }).addTo(map);
+});
+PIPELINES.branches.forEach(coords => {
+  L.polyline(coords, { color:'#00d4ff', weight:1.5, opacity:.4 }).addTo(map);
+});
+
+// Geofence circles around HIGH urgency zones
+const highAlerts = ALERTS.filter(a => a.urgency === 'HIGH');
+highAlerts.forEach(a => {
+  L.circle([a.lat, a.lng], {
+    radius: 2200,
+    color: TYPE_COLOR[a.type],
+    fillColor: TYPE_COLOR[a.type],
+    fillOpacity: 0.06,
+    weight: 1,
+    opacity: 0.3,
+    dashArray: '6 6'
+  }).addTo(map);
+});
+
+// Markers
+ALERTS.forEach(a => {
+  const col = TYPE_COLOR[a.type];
+  const isHigh = a.urgency === 'HIGH';
+  const icon = L.divIcon({
+    className: '',
+    iconSize: [24, 24],
+    iconAnchor: [12, 12],
+    html: `<div style="
+      position:relative;width:24px;height:24px;
+      display:flex;align-items:center;justify-content:center;
+    ">
+      ${isHigh ? `<div style="
+        position:absolute;width:24px;height:24px;border-radius:50%;
+        background:${col};opacity:.2;
+        animation:pin-ring 2s infinite;
+      "></div>` : ''}
+      <div style="
+        width:${isHigh?14:11}px;height:${isHigh?14:11}px;
+        border-radius:50%;
+        background:${col};
+        border:2px solid rgba(255,255,255,0.55);
+        box-shadow:0 0 10px ${col}99;
+        position:relative;z-index:1;
+      "></div>
+    </div>`
+  });
+
+  L.marker([a.lat, a.lng], {icon})
+    .addTo(map)
+    .bindPopup(`
+      <div style="
+        font-family:'DM Sans',sans-serif;
+        min-width:190px;
+        background:#232638;
+        color:#e8eaf6;
+        border-radius:10px;
+        padding:14px;
+        border:1px solid #383c57;
+      ">
+        <div style="font-size:11px;color:#5a5f80;font-family:'JetBrains Mono',monospace;margin-bottom:6px">${a.sensor} · ${a.time}</div>
+        <div style="font-size:15px;font-weight:700;color:${col};margin-bottom:10px">${a.type}</div>
+        <table style="width:100%;font-size:12px;border-collapse:collapse">
+          <tr><td style="color:#8f93b8;padding:3px 0">Zone</td><td style="text-align:right;color:#e8eaf6">${a.zone}</td></tr>
+          <tr><td style="color:#8f93b8;padding:3px 0">Segment</td><td style="text-align:right;color:#e8eaf6">${a.segment}</td></tr>
+          <tr><td style="color:#8f93b8;padding:3px 0">Est. Loss</td><td style="text-align:right;color:${col};font-weight:700">${a.loss.toLocaleString()} L</td></tr>
+          <tr><td style="color:#8f93b8;padding:3px 0">Urgency</td><td style="text-align:right;color:#e8eaf6;font-weight:600">${a.urgency}</td></tr>
+        </table>
+      </div>
+    `, { className:'', maxWidth:240 });
+});
+
+// ===============================================================
+// ALERTS PAGE
+// ===============================================================
+let pieChart = null;
+function getZoneSummary() {
+  const z = {};
+  ALERTS.forEach(a => { if (!z[a.zone]) z[a.zone]=0; z[a.zone]+=a.loss; });
+  return z;
+}
+function renderZoneCards() {
+  const z = getZoneSummary();
+  const maxLoss = Math.max(...Object.values(z));
+  const container = document.getElementById('zone-cards');
+  container.innerHTML = '';
+  const sel = document.getElementById('filter-zone');
+  sel.innerHTML = '<option value="">All Zones</option>';
+  Object.keys(z).sort().forEach(zone => {
+    const opt = document.createElement('option');
+    opt.value = zone; opt.textContent = zone;
+    sel.appendChild(opt);
+  });
+  Object.entries(z).sort((a,b)=>b[1]-a[1]).forEach(([zone, loss]) => {
+    const pct = Math.round((loss/maxLoss)*100);
+    const card = document.createElement('div');
+    card.className = 'zone-card';
+    card.innerHTML = `
+      <div class="zone-name">${zone}</div>
+      <div class="zone-loss">${(loss/1000).toFixed(1)}</div>
+      <div class="zone-unit">kL lost today</div>
+      <div class="zone-bar"><div class="zone-bar-fill" style="width:${pct}%"></div></div>
+    `;
+    container.appendChild(card);
+  });
+}
+function renderTable() {
+  const zf = document.getElementById('filter-zone').value;
+  const tf = document.getElementById('filter-type').value;
+  const tbody = document.getElementById('alerts-tbody');
+  const filtered = ALERTS.filter(a => (!zf||a.zone===zf) && (!tf||a.type===tf));
+  tbody.innerHTML = filtered.map(a => `
+    <tr>
+      <td style="font-family:'JetBrains Mono',monospace;color:#5a5f80">${a.time}</td>
+      <td style="font-family:'JetBrains Mono',monospace">${a.sensor}</td>
+      <td>${a.zone}</td>
+      <td style="color:#5a5f80">${a.segment}</td>
+      <td><span class="badge badge-${a.type}">${a.type}</span></td>
+      <td style="font-family:'JetBrains Mono',monospace;color:${TYPE_COLOR[a.type]}">${a.loss.toLocaleString()}</td>
+      <td class="urg-${a.urgency}">${a.urgency}</td>
+    </tr>
+  `).join('');
+}
+function renderPieChart() {
+  const z = getZoneSummary();
+  const total = Object.values(z).reduce((a,b)=>a+b,0);
+  const labels = Object.keys(z).sort((a,b)=>z[b]-z[a]);
+  const data = labels.map(k => z[k]);
+  const colors = ['#00d4ff','#ff4d6a','#b44dff','#ffcc00','#ff8c1a','#00e5a0','#e040fb','#40c4ff'];
+  if (pieChart) pieChart.destroy();
+  const ctx = document.getElementById('pieChart').getContext('2d');
+  pieChart = new Chart(ctx, {
+    type: 'doughnut',
+    data: { labels, datasets:[{ data, backgroundColor:colors.slice(0,labels.length), borderColor:'#232638', borderWidth:2, hoverOffset:6 }] },
+    options: {
+      responsive:true, maintainAspectRatio:false, cutout:'62%',
+      plugins: {
+        legend:{display:false},
+        tooltip:{
+          callbacks:{label:ctx=>` ${(ctx.raw/1000).toFixed(1)} kL (${Math.round(ctx.raw/total*100)}%)`},
+          backgroundColor:'#232638', borderColor:'#383c57', borderWidth:1,
+          titleColor:'#e8eaf6', bodyColor:'#8f93b8',
+          titleFont:{family:'JetBrains Mono'}, bodyFont:{family:'DM Sans'}
+        }
+      }
+    }
+  });
+  const legend = document.getElementById('chart-legend');
+  legend.innerHTML = labels.map((lbl, i) => `
+    <div class="cl-item">
+      <div class="cl-left">
+        <div class="cl-dot" style="background:${colors[i]}"></div>
+        <span>${lbl}</span>
+      </div>
+      <span class="cl-pct">${Math.round(data[i]/total*100)}%</span>
+    </div>
+  `).join('');
+}
+function renderAlerts() {
+  renderZoneCards();
+  renderTable();
+  renderPieChart();
+}
+</script>
+</body>
+</html>
