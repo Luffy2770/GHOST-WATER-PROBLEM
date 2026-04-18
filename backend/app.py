@@ -10,12 +10,31 @@ import os
 import uuid
 from datetime import datetime
 from dotenv import load_dotenv
+from flask import Flask, request, jsonify, render_template, session, redirect, url_for, flash
+import sqlite3
+from werkzeug.security import generate_password_hash, check_password_hash
 
 load_dotenv()
 
 app = Flask(__name__)
 CORS(app)
+app.secret_key = os.getenv('FLASK_SECRET_KEY', 'super-secret-default-key')
 
+# --- DATABASE SETUP ---
+def init_db():
+    with sqlite3.connect('users.db') as conn:
+        c = conn.cursor()
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT UNIQUE NOT NULL,
+                password TEXT NOT NULL
+            )
+        ''')
+        conn.commit()
+
+init_db() # Run this once when the app starts
+# ----------------------
 # ─────────────────────────────────────────
 # MODEL AND DATA SET LODEDER
 # ─────────────────────────────────────────
@@ -105,6 +124,65 @@ def home():
     return render_template('index.html')
 # --------------------------
 
+@app.route('/')
+def home():
+    # Check if the user is logged in
+    if not session.get('logged_in'):
+        # If not, redirect them to the login page
+        return redirect(url_for('login'))
+    
+    # If they are logged in, show the main dashboard
+    return render_template('index.html')
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    error = None
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        
+        with sqlite3.connect('users.db') as conn:
+            c = conn.cursor()
+            c.execute("SELECT * FROM users WHERE username = ?", (username,))
+            user = c.fetchone()
+            
+            # user[2] is the hashed password from the database
+            if user and check_password_hash(user[2], password):
+                session['logged_in'] = True
+                session['username'] = username # Optional: store the username to display it later
+                return redirect(url_for('home'))
+            else:
+                error = 'Invalid username or password. Please try again.'
+                
+    return render_template('login.html', error=error)
+
+@app.route('/signup', methods=['GET', 'POST'])
+def signup():
+    error = None
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        
+        with sqlite3.connect('users.db') as conn:
+            c = conn.cursor()
+            # Check if the username already exists
+            c.execute("SELECT * FROM users WHERE username = ?", (username,))
+            if c.fetchone():
+                error = "Username already exists. Please choose a different one."
+            else:
+                # Hash the password and save the new user
+                hashed_pw = generate_password_hash(password)
+                c.execute("INSERT INTO users (username, password) VALUES (?, ?)", (username, hashed_pw))
+                conn.commit()
+                return redirect(url_for('login'))
+                
+    return render_template('signup.html', error=error)
+
+@app.route('/logout')
+def logout():
+    # Remove the logged_in flag from the session
+    session.pop('logged_in', None)
+    return redirect(url_for('login'))
 # ─────────────────────────────────────────
 # ENDPOINT 1 — POST /predict
 # Frontend sends sensor reading, gets prediction back
