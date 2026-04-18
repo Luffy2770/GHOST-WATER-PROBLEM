@@ -1,16 +1,23 @@
 import pandas as pd
 import numpy as np
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 import joblib
 import warnings
 warnings.filterwarnings('ignore')
+import json
+import os
+import uuid
+from datetime import datetime
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = Flask(__name__)
 CORS(app)
 
 # ─────────────────────────────────────────
-# LOAD MODEL + DATASET ON STARTUP
+# MODEL AND DATA SET LODEDER
 # ─────────────────────────────────────────
 print("Loading model...")
 bundle          = joblib.load('model.pkl')
@@ -76,6 +83,27 @@ def generate_message(nrw_type, zone, segment_id, loss, urgency, lat, lon):
         f"Estimated loss: {int(loss):,} litres/hr. "
         f"Urgency: {urgency}. Dispatch field team immediately."
     )
+
+# ─────────────────────────────────────────
+# DISPATCH LOG  (in-memory + persisted to dispatches.json)
+# ─────────────────────────────────────────
+DISPATCH_FILE = 'dispatches.json'
+
+def load_dispatches():
+    if os.path.exists(DISPATCH_FILE):
+        with open(DISPATCH_FILE, 'r') as f:
+            return json.load(f)
+    return []
+
+def save_dispatches(records):
+    with open(DISPATCH_FILE, 'w') as f:
+        json.dump(records, f, indent=2)
+
+# --- ADD THIS NEW ROUTE ---
+@app.route('/')
+def home():
+    return render_template('index.html')
+# --------------------------
 
 # ─────────────────────────────────────────
 # ENDPOINT 1 — POST /predict
@@ -289,6 +317,130 @@ def zone_summary():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+# ─────────────────────────────────────────
+# ENDPOINT 6 — POST /dispatch   ← NEW
+# Sends WhatsApp work order to the zone's field crew
+# ─────────────────────────────────────────
+@app.route('/dispatch', methods=['POST'])
+def dispatch():
+    try:
+        from whatsapp import send_whatsapp_alert, build_whatsapp_message, get_crew_phone
+
+        data           = request.get_json()
+        zone           = str(data.get('zone', 'Z1'))
+        segment_id     = str(data.get('segment_id', 'SEG-000'))
+        nrw_type       = str(data.get('nrw_type', 'none'))
+        urgency        = str(data.get('urgency', 'LOW'))
+        estimated_loss = float(data.get('estimated_loss_liters', 0))
+        lat            = float(data.get('latitude', 23.0225))
+        lon            = float(data.get('longitude', 72.5714))
+
+        work_order_id = str(uuid.uuid4())[:8].upper()
+
+        message = build_whatsapp_message(
+            nrw_type       = nrw_type,
+            zone           = zone,
+            segment_id     = segment_id,
+            urgency        = urgency,
+            estimated_loss = estimated_loss,
+            lat            = lat,
+            lon            = lon,
+            work_order_id  = work_order_id
+        )
+
+        crew_phone = get_crew_phone(zone)
+        result = send_whatsapp_alert(to_number=crew_phone, message=message)
+
+        dispatch_record = {
+            'work_order_id':         work_order_id,
+            'timestamp':             datetime.utcnow().isoformat(),
+            'zone':                  zone,
+            'segment_id':            segment_id,
+            'nrw_type':              nrw_type,
+            'urgency':               urgency,
+            'estimated_loss_liters': estimated_loss,
+            'latitude':              lat,
+            'longitude':             lon,
+            'crew_phone':            crew_phone,
+            'message_sid':           result.get('message_sid'),
+            'status':                'SENT' if result['success'] else 'FAILED',
+            'whatsapp_error':        result.get('error'),
+            'confirmed_at':          None
+        }
+
+        dispatches = load_dispatches()
+        dispatches.append(dispatch_record)
+        save_dispatches(dispatches)
+
+        status_code = 200 if result['success'] else 500
+        return jsonify({
+            'success':        result['success'],
+            'work_order_id':  work_order_id,
+            'message_sid':    result.get('message_sid'),
+            'message_sent':   message,
+            'crew_phone':     crew_phone,
+            'error':          result.get('error')
+        }), status_code
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# ─────────────────────────────────────────
+# ENDPOINT 7 — POST /confirm   ← NEW
+# Twilio webhook — called when field crew replies "DONE <work_order_id>"
+# ─────────────────────────────────────────
+@app.route('/confirm', methods=['POST'])
+def confirm():
+    try:
+        body          = request.form.get('Body', '').strip().upper()
+        from_number   = request.form.get('From', '').replace('whatsapp:', '')
+
+        if body.startswith('DONE'):
+            parts = body.split()
+            work_order_id = parts[1] if len(parts) > 1 else None
+
+            if work_order_id:
+                dispatches = load_dispatches()
+                updated    = False
+                for record in dispatches:
+                    if record['work_order_id'] == work_order_id:
+                        record['status']       = 'CONFIRMED'
+                        record['confirmed_at'] = datetime.utcnow().isoformat()
+                        record['confirmed_by'] = from_number
+                        updated = True
+                        break
+                if updated:
+                    save_dispatches(dispatches)
+                    return (
+                        '<?xml version="1.0" encoding="UTF-8"?>'
+                        '<Response>'
+                        f'<Message>✅ Work order #{work_order_id} marked CONFIRMED. Thank you!</Message>'
+                        '</Response>'
+                    ), 200, {'Content-Type': 'text/xml'}
+
+        return (
+            '<?xml version="1.0" encoding="UTF-8"?>'
+            '<Response></Response>'
+        ), 200, {'Content-Type': 'text/xml'}
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# ─────────────────────────────────────────
+# ENDPOINT 8 — GET /work-orders   ← NEW
+# Returns dispatch log for the frontend
+# ─────────────────────────────────────────
+@app.route('/work-orders', methods=['GET'])
+def work_orders():
+    try:
+        dispatches = load_dispatches()
+        dispatches_sorted = sorted(dispatches, key=lambda x: x['timestamp'], reverse=True)
+        return jsonify(dispatches_sorted)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 
 # ─────────────────────────────────────────
 # RUN SERVER
@@ -305,3 +457,13 @@ if __name__ == '__main__':
     print("    GET  http://localhost:5000/zone-summary")
     print("="*50 + "\n")
     app.run(debug=True, port=5000)
+
+
+# mid-night case
+# Invoke-RestMethod -Method Post -Uri http://localhost:5000/predict -ContentType "application/json" -Body '{"pressure_bar": 2.8, "flow_lpm": 150, "expected_pressure_bar": 3.5, "zone": "Z1", "sensor_id": "S12", "demand_peak_flag": 0, "segment_id": "SEG-012"}'
+#
+# meter freezz
+# Invoke-RestMethod -Method Post -Uri http://localhost:5000/predict -ContentType "application/json" -Body '{"pressure_bar": 4.0, "flow_lpm": 5, "expected_pressure_bar": 4.0, "zone": "Z2", "sensor_id": "S44", "demand_peak_flag": 1, "segment_id": "SEG-044"}'
+#
+# blow off case
+# Invoke-RestMethod -Method Post -Uri http://localhost:5000/predict -ContentType "application/json" -Body '{"pressure_bar": 0.5, "flow_lpm": 900, "expected_pressure_bar": 4.5, "zone": "Z3", "sensor_id": "VALVE-FLUSH-01", "demand_peak_flag": 0, "segment_id": "SEG-SCOUR-99", "estimated_loss_liters": 25000}'
