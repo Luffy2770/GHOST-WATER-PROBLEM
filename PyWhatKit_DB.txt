@@ -1,0 +1,120 @@
+Date: 18/4/2026
+Time: 20:23
+Phone Number: +918401970323
+Message: *GHOST WATER DETECTOR ALERT*⏰ Time: 2026-04-18 20:23Zone: Z1 | Segment: SEG_647...
+--------------------
+Date: 18/4/2026
+Time: 20:25
+Phone Number: +918401970323
+Message: *GHOST WATER DETECTOR ALERT*⏰ Time: 2026-04-18 20:25Zone: Z1 | Segment: SEG_647...
+--------------------
+Date: 18/4/2026
+Time: 21:3
+Phone Number: +918401970323
+Message: *GHOST WATER DETECTOR ALERT*⏰ Time: 2026-04-18 21:03Zone: Z1 | Segment: SEG_647...
+--------------------
+Date: 18/4/2026
+Time: 21:5
+Phone Number: +918401970323
+Message: *GHOST WATER DETECTOR ALERT*⏰ Time: 2026-04-18 21:04Zone: Z1 | Segment: SEG_647...
+--------------------
+Date: 18/4/2026
+Time: 21:6
+Phone Number: +916352066397
+Message: *GHOST WATER DETECTOR ALERT*⏰ Time: 2026-04-18 21:06Zone: Z1 | Segment: SEG_647...
+--------------------
+Date: 18/4/2026
+Time: 21:42
+Phone Number: +919016742409
+Message: *WORK ORDER DISPATCH* 🔴-----------------------------------📍 *Target:* Zone Z2 | Segment SEG_899⚠️ *Priority:* HIGH🔧 *Issue:* PIPE BURST detected.-----------------------------------🗺️ *Route Pin:* http://maps.google.com/?q=23.082692,72.683047Reply 'DONE' upon repair completion.
+--------------------
+Date: 18/4/2026
+Time: 21:43
+Phone Number: +918401970323
+Message: *NETWORK SYSTEM ALERT* 🔴-----------------------------------⏰ *Time:* 21:42📍 *Location:* Zone Z2 | SEG_899🔍 *Classification:* PIPE BURSTAutomated crew dispatch has been initiated to the coordinates.
+--------------------
+Date: 18/4/2026
+Time: 21:43
+Phone Number: +916352066397
+Message: *CRITICAL NRW ALERT* 🔴-----------------------------------A critical PIPE BURST is occurring in Zone Z2.💰 *Estimated Daily Loss:* 1450.5 Litres.Field crews have been mobilized. Check the dashboard for mitigation status.
+--------------------
+Date: 18/4/2026
+Time: 22:2
+Phone Number: +919016742409
+Message: *WORK ORDER DISPATCH* 🔴-----------------------------------📍 *Target:* Zone Z1 | Segment SEG_101⚠️ *Priority:* HIGH🔧 *Issue:* PIPE BURST detected.-----------------------------------🗺️ *Route Pin:* http://maps.google.com/?q=23.0123,72.5123Reply 'DONE' upon repair completion.
+--------------------
+Date: 18/4/2026
+Time: 22:3
+Phone Number: +919016742409
+Message: *NETWORK SYSTEM ALERT* 🔴-----------------------------------⏰ *Time:* 22:03📍 *Location:* Zone Z1 | SEG_101🔍 *Classification:* PIPE BURSTAutomated crew dispatch has been initiated to the coordinates.
+--------------------
+Date: 18/4/2026
+Time: 22:3
+Phone Number: +919016742409
+Message: *CRITICAL NRW ALERT* 🔴-----------------------------------A critical PIPE BURST is occurring in Zone Z1.💰 *Estimated Daily Loss:* 2500.0 Litres.Field crews have been mobilized. Check the dashboard for mitigation status.
+--------------------
+Date: 18/4/2026
+Time: 22:3
+Phone Number: +919016742409
+Message: *WORK ORDER DISPATCH* 🟠-----------------------------------📍 *Target:* Zone Z2 | Segment SEG_205⚠️ *Priority:* MEDIUM🔧 *Issue:* SLOW SEEPAGE detected.-----------------------------------🗺️ *Route Pin:* http://maps.google.com/?q=23.0456,72.5456Reply 'DONE' upon repair completion.
+--------------------
+Date: 18/4/2026
+Time: 22:4
+Phone Number: +919016742409
+Message: *NETWORK SYSTEM ALERT* 🟠-----------------------------------⏰ *Time:* 22:03📍 *Location:* Zone Z2 | SEG_205🔍 *Classification:* SLOW SEEPAGEAutomated crew dispatch has been initiated to the coordinates.
+--------------------
+Date: 18/4/2026
+Time: 22:6
+Phone Number: +919016742409
+Message: *WORK ORDER DISPATCH* 🔴-----------------------------------📍 *Target:* Zone Z1 | Segment SEG_101⚠️ *Priority:* HIGH🔧 *Issue:* PIPE BURST detected.-----------------------------------🗺️ *Route Pin:* http://maps.google.com/?q=23.0123,72.5123Reply 'DONE' upon repair completion.
+--------------------
+Date: 18/4/2026
+Time: 22:6
+Phone Number: +919016742409
+Message: *NETWORK SYSTEM ALERT* 🔴-----------------------------------⏰ *Time:* 22:06📍 *Location:* Zone Z1 | SEG_101🔍 *Classification:* PIPE BURSTAutomated crew dispatch has been initiated to the coordinates.
+--------------------
+Date: 18/4/2026
+Time: 22:6
+Phone Number: +919016742409
+Message: *CRITICAL NRW ALERT* 🔴-----------------------------------A critical PIPE BURST is occurring in Zone Z1.💰 *Estimated Daily Loss:* 2500.0 Litres.Field crews have been mobilized. Check the dashboard for mitigation status.
+--------------------
+Date: 18/4/2026
+Time: 22:6
+Phone Number: +919016742409
+Message: *WORK ORDER DISPATCH* 🟠-----------------------------------📍 *Target:* Zone Z2 | Segment SEG_205⚠️ *Priority:* MEDIUM🔧 *Issue:* SLOW SEEPAGE detected.-----------------------------------🗺️ *Route Pin:* http://maps.google.com/?q=23.0456,72.5456Reply 'DONE' upon repair completion.
+--------------------
+Date: 18/4/2026
+Time: 22:7
+Phone Number: +919016742409
+Message: *NETWORK SYSTEM ALERT* 🟠-----------------------------------⏰ *Time:* 22:07📍 *Location:* Zone Z2 | SEG_205🔍 *Classification:* SLOW SEEPAGEAutomated crew dispatch has been initiated to the coordinates.
+--------------------
+Date: 18/4/2026
+Time: 22:26
+Phone Number: https://chat.whatsapp.com/H0eXrRUaND9H67KQwMp2Ti?mode=gi_t
+Message: *🚨 NRW COMMAND CENTER ALERT* 🔴-----------------------------------Attention Z1 Engineering & Field Crews:⏰ *Time:* 2026-04-18 22:26📍 *Location:* Zone Z1 | Segment SEG_101🔍 *Classification:* PIPE BURST⚠️ *Priority:* HIGH💰 *Est. Impact:* 2500.0 Litres/day-----------------------------------🗺️ *Crew Routing Pin:* http://maps.google.com/?q=23.0123,72.5123👉 *Action Required:* Z1 Field Crew, reply 'ACKNOWLEDGED' when en route, and 'DONE' upon repair.
+--------------------
+Date: 18/4/2026
+Time: 22:27
+Phone Number: https://chat.whatsapp.com/H0eXrRUaND9H67KQwMp2Ti?mode=gi_t
+Message: *🚨 NRW COMMAND CENTER ALERT* 🟠-----------------------------------Attention Z2 Engineering & Field Crews:⏰ *Time:* 2026-04-18 22:27📍 *Location:* Zone Z2 | Segment SEG_205🔍 *Classification:* METER TAMPER⚠️ *Priority:* MEDIUM💰 *Est. Impact:* 450.0 Litres/day-----------------------------------🗺️ *Crew Routing Pin:* http://maps.google.com/?q=23.0456,72.5456👉 *Action Required:* Z2 Field Crew, reply 'ACKNOWLEDGED' when en route, and 'DONE' upon repair.
+--------------------
+Date: 18/4/2026
+Time: 22:35
+Phone Number: H0eXrRUaND9H67KQwMp2Ti?mode=gi_t
+Message: *🚨 NRW COMMAND CENTER ALERT* 🔴-----------------------------------Attention Z1 Engineering & Field Crews:⏰ *Time:* 2026-04-18 22:35📍 *Location:* Zone Z1 | Segment SEG_101🔍 *Classification:* PIPE BURST⚠️ *Priority:* HIGH💰 *Est. Impact:* 2500.0 Litres/day-----------------------------------🗺️ *Crew Routing Pin:* http://maps.google.com/?q=23.0123,72.5123👉 *Action Required:* Z1 Field Crew, reply 'ACKNOWLEDGED' when en route, and 'DONE' upon repair.
+--------------------
+Date: 18/4/2026
+Time: 22:36
+Phone Number: H0eXrRUaND9H67KQwMp2Ti?mode=gi_t
+Message: *🚨 NRW COMMAND CENTER ALERT* 🟠-----------------------------------Attention Z2 Engineering & Field Crews:⏰ *Time:* 2026-04-18 22:36📍 *Location:* Zone Z2 | Segment SEG_205🔍 *Classification:* METER TAMPER⚠️ *Priority:* MEDIUM💰 *Est. Impact:* 450.0 Litres/day-----------------------------------🗺️ *Crew Routing Pin:* http://maps.google.com/?q=23.0456,72.5456👉 *Action Required:* Z2 Field Crew, reply 'ACKNOWLEDGED' when en route, and 'DONE' upon repair.
+--------------------
+Date: 18/4/2026
+Time: 22:37
+Phone Number: H0eXrRUaND9H67KQwMp2Ti?mode=gi_t
+Message: *🚨 NRW COMMAND CENTER ALERT* 🔴-----------------------------------Attention Z1 Engineering & Field Crews:⏰ *Time:* 2026-04-18 22:37📍 *Location:* Zone Z1 | Segment SEG_101🔍 *Classification:* PIPE BURST⚠️ *Priority:* HIGH💰 *Est. Impact:* 2500.0 Litres/day-----------------------------------🗺️ *Crew Routing Pin:* http://maps.google.com/?q=23.0123,72.5123👉 *Action Required:* Z1 Field Crew, reply 'ACKNOWLEDGED' when en route, and 'DONE' upon repair.
+--------------------
+Date: 18/4/2026
+Time: 22:38
+Phone Number: H0eXrRUaND9H67KQwMp2Ti?mode=gi_t
+Message: *🚨 NRW COMMAND CENTER ALERT* 🟠-----------------------------------Attention Z2 Engineering & Field Crews:⏰ *Time:* 2026-04-18 22:38📍 *Location:* Zone Z2 | Segment SEG_205🔍 *Classification:* METER TAMPER⚠️ *Priority:* MEDIUM💰 *Est. Impact:* 450.0 Litres/day-----------------------------------🗺️ *Crew Routing Pin:* http://maps.google.com/?q=23.0456,72.5456👉 *Action Required:* Z2 Field Crew, reply 'ACKNOWLEDGED' when en route, and 'DONE' upon repair.
+--------------------
