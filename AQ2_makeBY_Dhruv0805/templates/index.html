@@ -1,0 +1,1162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AquaWatch • Ahmedabad NRW Monitor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        :root {
+            --bg: #0d1b2e;
+            --bg2: #0f2040;
+            --bg3: #122348;
+            --surface: #0f2040;
+            --border: #1e3a5f;
+            --text: #e8f0fa;
+            --text2: #93b4d8;
+            --text3: #5580a8;
+            --pink: #e8265a;
+            --cyan: #38b4f0;
+            --burst: #ff5252;
+            --seep: #f6c94e;
+            --illegal: #b07ff5;
+            --tamper: #ff8c42;
+            --safe: #4ecb7a;
+        }
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'DM Sans', system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            margin: 0;
+            overflow: hidden;
+            display: flex;
+            height: 100vh;
+        }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+
+        /* ── Sidebar ── */
+        #sidebar {
+            width: 220px;
+            background: var(--bg2);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            flex-shrink: 0;
+        }
+        .sidebar-logo {
+            padding: 32px 24px 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .logo-icon { width: 36px; height: 36px; background: var(--pink); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+        .sidebar-nav { flex: 1; padding: 24px 12px; display: flex; flex-direction: column; gap: 4px; }
+        .nav-section-label { padding: 0 12px; color: var(--text3); font-size: 11px; font-weight: 500; margin: 16px 0 8px; letter-spacing: 1px; }
+        .nav-section-label:first-child { margin-top: 0; }
+        .nav-item {
+            display: flex; align-items: center; gap: 12px;
+            padding: 12px 16px; margin: 0 8px;
+            border-radius: 16px; color: var(--text2);
+            cursor: pointer; position: relative;
+            font-weight: 500; font-size: 14px;
+            transition: background 0.15s, color 0.15s;
+            text-decoration: none;
+        }
+        .nav-item:hover { background: var(--bg3); color: var(--text); }
+        .nav-item.active { color: var(--text); background: var(--bg3); }
+        .nav-item.active::before {
+            content: '';
+            position: absolute; left: -8px; top: 0; bottom: 0;
+            width: 4px; background: var(--pink); border-radius: 0 4px 4px 0;
+        }
+        .alert-badge {
+            margin-left: auto;
+            background: var(--pink); color: #fff;
+            font-size: 10px; font-weight: 700;
+            padding: 2px 8px; border-radius: 20px;
+            min-width: 20px; text-align: center;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .sidebar-footer {
+            border-top: 1px solid var(--border);
+            padding: 24px;
+            margin-top: auto;
+        }
+        .live-dot { width: 10px; height: 10px; background: var(--safe); border-radius: 50%; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+        .backend-offline {
+            display: none;
+            color: #fbbf24; font-size: 11px;
+            margin-top: 10px;
+            align-items: center; gap: 6px;
+        }
+        .backend-offline.show { display: flex; }
+
+        /* ── Main ── */
+        #main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+        /* ── Topbar ── */
+        #topbar {
+            height: 56px;
+            background: var(--bg2);
+            border-bottom: 1px solid var(--border);
+            padding: 0 32px;
+            display: flex; align-items: center; justify-content: space-between;
+            flex-shrink: 0;
+        }
+        .topbar-left { display: flex; align-items: center; gap: 16px; }
+        #page-title { font-size: 18px; font-weight: 600; }
+        .last-updated {
+            font-size: 11px; font-family: 'JetBrains Mono', monospace;
+            background: var(--bg3); color: var(--text3);
+            padding: 4px 12px; border-radius: 20px;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .last-updated .dot { width: 8px; height: 8px; background: var(--safe); border-radius: 50%; animation: pulse 1.5s infinite; }
+        .search-wrap { position: relative; width: 280px; }
+        .search-wrap input {
+            width: 100%; padding: 8px 16px 8px 38px;
+            background: var(--bg3); border: 1px solid var(--border);
+            border-radius: 20px; color: var(--text); font-size: 13px; outline: none;
+        }
+        .search-wrap input:focus { border-color: var(--pink); }
+        .search-wrap input::placeholder { color: var(--text3); }
+        .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 16px; }
+        .user-info { text-align: right; }
+        .user-name { font-size: 13px; font-weight: 500; }
+        .user-sub { font-size: 10px; color: var(--text3); }
+        .avatar { width: 32px; height: 32px; background: linear-gradient(135deg, var(--cyan), var(--pink)); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+
+        /* ── Stat strip ── */
+        #stat-strip {
+            display: grid; grid-template-columns: repeat(5, 1fr);
+            gap: 16px; padding: 20px 32px;
+            background: var(--bg); flex-shrink: 0;
+        }
+        .stat-card {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 20px; padding: 18px 20px;
+            display: flex; align-items: center; gap: 14px;
+        }
+        .stat-icon { width: 44px; height: 44px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0; }
+        .stat-label { font-size: 10px; color: var(--text3); letter-spacing: 0.5px; margin-bottom: 2px; }
+        .stat-val { font-size: 28px; font-weight: 600; font-family: 'JetBrains Mono', monospace; line-height: 1; }
+
+        /* ── Map Page ── */
+        #page-dashboard { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        #map-wrapper { flex: 1; position: relative; padding: 0 32px 32px; }
+        #map { width: 100%; height: 100%; border-radius: 24px; border: 1px solid var(--border); }
+
+        .leaflet-container { background: #0d1b2e !important; }
+        .custom-popup .leaflet-popup-content-wrapper {
+            background: #0f2040; color: #e8f0fa;
+            border-radius: 16px; padding: 0; overflow: hidden;
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+        }
+        .custom-popup .leaflet-popup-tip { background: #0f2040; }
+        .custom-popup .leaflet-popup-content { margin: 0; }
+
+        /* Map overlays */
+        .map-overlay {
+            position: absolute; z-index: 1000;
+            background: rgba(15,32,64,0.95);
+            backdrop-filter: blur(12px);
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+        }
+        #legend-overlay { top: 16px; left: 48px; padding: 20px; width: 260px; }
+        #info-overlay { top: 16px; right: 48px; padding: 20px 24px; }
+        #latlng-bar { bottom: 48px; left: 50%; transform: translateX(-50%); padding: 8px 28px; white-space: nowrap; }
+
+        .legend-title { font-size: 10px; color: var(--text3); letter-spacing: 1px; margin-bottom: 12px; }
+        .legend-sep { height: 1px; background: var(--border); margin: 12px 0; }
+        .legend-row { display: flex; align-items: center; gap: 8px; font-size: 12px; margin-bottom: 6px; }
+        .legend-line { width: 24px; height: 3px; border-radius: 2px; }
+        .legend-dot { width: 14px; height: 14px; border-radius: 6px; flex-shrink: 0; }
+        .legend-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 11px; }
+        .legend-item { display: flex; align-items: center; gap: 6px; }
+
+        #info-overlay .big-num { font-size: 28px; font-weight: 600; font-family: 'JetBrains Mono', monospace; }
+        #info-overlay .sub { font-size: 13px; color: var(--text3); }
+        #map-last-update { font-size: 10px; color: var(--text3); font-family: 'JetBrains Mono', monospace; margin-top: 12px; }
+
+        /* Anomaly animations */
+        @keyframes pipePulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+        @keyframes nodeGrow { 0%,100%{transform:scale(1)} 50%{transform:scale(1.6)} }
+
+        /* Leaflet tooltip — dark monospace matching React MapView bindTooltip */
+        .aqua-tooltip {
+            background: rgba(13,27,46,0.97) !important;
+            border: 1px solid #1e3a5f !important;
+            border-radius: 10px !important;
+            color: #e8f0fa !important;
+            font-family: 'JetBrains Mono', monospace !important;
+            font-size: 12px !important;
+            padding: 8px 12px !important;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5) !important;
+            white-space: nowrap;
+        }
+        .aqua-tooltip.leaflet-tooltip-top::before { border-top-color: #1e3a5f !important; }
+        .leaflet-tooltip { transition: opacity 0.15s ease; }
+
+        /* ── Alerts Page ── */
+        #page-alerts { flex: 1; display: none; flex-direction: column; overflow: hidden; }
+        #zone-summary-strip { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; padding: 20px 32px 8px; flex-shrink: 0; }
+        .zone-card { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 18px 20px; display: flex; gap: 14px; }
+        .zone-badge { width: 44px; height: 44px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: #111; flex-shrink: 0; }
+        .zone-name { font-weight: 600; font-size: 14px; }
+        .zone-loss { font-size: 24px; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+        .zone-bar-wrap { height: 6px; background: var(--bg3); border-radius: 4px; margin-top: 10px; }
+        .zone-bar { height: 6px; border-radius: 4px; }
+
+        #filters-bar { padding: 8px 32px 12px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+        #filters-bar select { background: var(--bg3); border: 1px solid var(--border); color: var(--text); font-size: 13px; border-radius: 20px; padding: 7px 18px; outline: none; cursor: pointer; }
+        .clear-btn { margin-left: auto; font-size: 12px; color: var(--text3); cursor: pointer; display: flex; align-items: center; gap: 6px; background: none; border: none; }
+        .clear-btn:hover { color: var(--pink); }
+        .alert-count-pill { font-size: 11px; font-family: 'JetBrains Mono', monospace; color: var(--text3); padding: 6px 16px; background: var(--bg3); border-radius: 20px; }
+
+        #alerts-body { display: flex; flex: 1; overflow: hidden; padding: 16px 32px 24px; gap: 20px; }
+        #alerts-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; padding-right: 8px; }
+        #alerts-list::-webkit-scrollbar { width: 4px; }
+        #alerts-list::-webkit-scrollbar-track { background: transparent; }
+        #alerts-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+        .alert-card { border-radius: 20px; border-left: 6px solid; background: var(--surface); padding: 20px 24px; }
+        .alert-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+        .alert-id { font-family: 'JetBrains Mono', monospace; font-size: 15px; font-weight: 600; }
+        .alert-tags { display: flex; align-items: center; gap: 8px; }
+        .tag { padding: 3px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+        .alert-meta { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+        .nrw-badge { padding: 6px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; color: #111; }
+        .sensor-id { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text2); }
+        .peak-flag { color: #fbbf24; font-size: 11px; }
+        .alert-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 18px; }
+        .alert-metric-label { font-size: 10px; color: var(--text3); letter-spacing: 0.5px; margin-bottom: 4px; }
+        .alert-metric-val { font-size: 22px; font-weight: 600; font-family: 'JetBrains Mono', monospace; line-height: 1; }
+        .alert-metric-unit { font-size: 11px; color: var(--text3); }
+        .dispatch-btn {
+            width: 100%; padding: 14px; border-radius: 20px;
+            border: none; cursor: pointer; font-size: 13px; font-weight: 600;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            transition: background 0.2s;
+        }
+        .dispatch-btn.pending { background: var(--pink); color: #fff; }
+        .dispatch-btn.pending:hover { background: #d41e4f; }
+        .dispatch-btn.done { background: var(--safe); color: #111; cursor: default; }
+        .dispatch-btn:disabled { opacity: 0.85; cursor: not-allowed; }
+
+        /* Chart sidebar */
+        #chart-sidebar { width: 340px; background: var(--bg2); border: 1px solid var(--border); border-radius: 24px; padding: 24px; display: flex; flex-direction: column; flex-shrink: 0; }
+        .chart-title { font-size: 13px; font-weight: 600; margin-bottom: 16px; letter-spacing: 0.5px; }
+        #chart-canvas-wrap { flex: 1; display: flex; align-items: center; justify-content: center; min-height: 200px; }
+        #chart-legend-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 11px; margin-top: 16px; }
+        .chart-legend-item { display: flex; align-items: center; gap: 6px; }
+        .chart-legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+        /* Toast */
+        #toast {
+            position: fixed; bottom: 32px; right: 32px;
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 20px; padding: 16px 24px;
+            display: none; align-items: center; gap: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+            z-index: 9999; cursor: pointer;
+            font-weight: 500; font-size: 14px;
+        }
+        #toast.show { display: flex; }
+        .toast-icon { font-size: 22px; }
+    </style>
+</head>
+<body>
+
+<div id="sidebar">
+    <div class="sidebar-logo">
+        <div class="logo-icon">💧</div>
+        <div>
+            <div style="font-size:18px;font-weight:600;letter-spacing:-0.5px">AquaWatch</div>
+            <div class="mono" style="font-size:10px;color:var(--text3);letter-spacing:1px">AHMEDABAD • NRW</div>
+        </div>
+    </div>
+
+    <div class="sidebar-nav">
+        <div class="nav-section-label">MONITOR</div>
+
+        <div class="nav-item active" id="nav-dashboard" onclick="navigateTo('dashboard')">
+            <span style="font-size:18px">🗺️</span> Dashboard
+        </div>
+        <div class="nav-item" id="nav-alerts" onclick="navigateTo('alerts')">
+            <span style="font-size:18px">🚨</span> Alerts
+            <span class="alert-badge" id="alert-badge" style="display:none">0</span>
+        </div>
+
+        <div class="nav-section-label">NETWORK</div>
+
+        <div class="nav-item" onclick="navigateTo('dashboard')">
+            <span style="font-size:18px">📡</span> Sensors
+        </div>
+        <div class="nav-item" onclick="navigateTo('dashboard')">
+            <span style="font-size:18px">🗂️</span> Zones
+        </div>
+    </div>
+
+    <div class="sidebar-footer">
+        <div style="display:flex;align-items:center;gap:8px">
+            <div class="live-dot"></div>
+            <span style="font-size:13px;font-weight:500;color:var(--safe)">LIVE</span>
+            <span id="live-clock" class="mono" style="font-size:11px;color:var(--text3);margin-left:auto"></span>
+        </div>
+        <div class="backend-offline" id="backend-status">
+            <div class="live-dot" style="background:#fbbf24"></div>
+            BACKEND OFFLINE — RETRYING
+        </div>
+        <div class="mono" style="font-size:10px;color:var(--text3);margin-top:20px">Connected to Ahmedabad WDN • 11,000+ Nodes</div>
+    </div>
+</div>
+
+<div id="main">
+
+    <div id="topbar">
+        <div class="topbar-left">
+            <div id="page-title">Dashboard</div>
+            <div class="last-updated">
+                <div class="dot"></div>
+                LAST UPDATED <span id="ts-val" class="mono" style="font-weight:600;margin-left:4px"></span>
+            </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:20px">
+            <div class="search-wrap">
+                <span class="search-icon">🔎</span>
+                <input type="text" placeholder="Search segment or sensor ID...">
+            </div>
+            <div style="display:flex;align-items:center;gap:10px">
+                <div class="user-info">
+                    <div class="user-name">Field Ops • Ahmedabad</div>
+                    <div class="user-sub">Municipal Corporation</div>
+                </div>
+                <div class="avatar">👷‍♂️</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="page-dashboard">
+
+        <div id="stat-strip">
+            <div class="stat-card">
+                <div class="stat-icon" style="background:rgba(56,180,240,0.1);color:var(--cyan)">📡</div>
+                <div><div class="stat-label">SENSORS ONLINE</div><div class="stat-val" id="s-sensors">—</div></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon" style="background:rgba(255,82,82,0.1);color:var(--burst)">🚨</div>
+                <div><div class="stat-label">ACTIVE ANOMALIES</div><div class="stat-val" id="s-anomalies" style="color:var(--burst)">—</div></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon" style="background:rgba(246,201,78,0.1);color:var(--seep)">💧</div>
+                <div><div class="stat-label">TOTAL LOSS</div><div class="stat-val" id="s-loss">—</div></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon" style="background:rgba(56,180,240,0.1);color:var(--cyan)">🟦</div>
+                <div><div class="stat-label">ACTIVE ZONES</div><div class="stat-val" id="s-zones">25</div></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon" style="background:rgba(56,180,240,0.1);color:var(--cyan)">📊</div>
+                <div><div class="stat-label">TOTAL READINGS</div><div class="stat-val" id="s-rows">—</div></div>
+            </div>
+        </div>
+
+        <div id="map-wrapper">
+            <div id="map"></div>
+
+            <div class="map-overlay" id="legend-overlay">
+                <div class="legend-title">PIPELINE LEGEND</div>
+                <div class="legend-row"><div class="legend-line" style="background:var(--cyan)"></div><span>City Zones (Z1 - Z25)</span></div>
+                <div class="legend-sep"></div>
+                <div class="legend-grid">
+                    <div class="legend-item"><div class="legend-dot" style="background:var(--burst)"></div>PIPE BURST</div>
+                    <div class="legend-item"><div class="legend-dot" style="background:var(--seep)"></div>SLOW SEEPAGE</div>
+                    <div class="legend-item"><div class="legend-dot" style="background:var(--illegal)"></div>ILLEGAL TAP</div>
+                    <div class="legend-item"><div class="legend-dot" style="background:var(--tamper)"></div>METER TAMPER</div>
+                </div>
+            </div>
+
+            <div class="map-overlay" id="info-overlay">
+                <div style="display:flex;align-items:baseline;gap:8px">
+                    <span class="big-num" id="map-segments">—</span>
+                    <span class="sub">active segments</span>
+                </div>
+                <div style="display:flex;align-items:baseline;gap:8px;margin-top:4px">
+                    <span class="big-num" id="map-anomalies" style="color:var(--burst)">—</span>
+                    <span class="sub">anomalies detected</span>
+                </div>
+                <div id="map-last-update">Updated just now</div>
+            </div>
+
+            <div class="map-overlay" id="latlng-bar">
+                <span class="mono" style="font-size:12px;color:var(--text2)">
+                    LAT <span id="mouse-lat" style="color:var(--cyan)">23.0225</span>
+                    &nbsp;&nbsp;LON <span id="mouse-lon" style="color:var(--cyan)">72.5714</span>
+                    &nbsp;&nbsp;<span style="color:var(--text3)">•</span>&nbsp;&nbsp;
+                    <span style="color:var(--text3)">Ahmedabad Water Distribution Network</span>
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <div id="page-alerts">
+
+        <div id="zone-summary-strip"></div>
+
+        <div id="filters-bar">
+            <select id="filter-zone" onchange="filterAlerts()">
+                <option value="All">All Zones</option>
+                <option value="Z1">Z1</option>
+                <option value="Z2">Z2</option>
+                <option value="Z3">Z3</option>
+                <option value="Z4">Z4</option>
+                <option value="Z5">Z5</option>
+                <option value="Z6">Z6</option>
+                <option value="Z7">Z7</option>
+                <option value="Z8">Z8</option>
+                <option value="Z9">Z9</option>
+                <option value="Z10">Z10</option>
+                <option value="Z11">Z11</option>
+                <option value="Z12">Z12</option>
+                <option value="Z13">Z13</option>
+                <option value="Z14">Z14</option>
+                <option value="Z15">Z15</option>
+                <option value="Z16">Z16</option>
+                <option value="Z17">Z17</option>
+                <option value="Z18">Z18</option>
+                <option value="Z19">Z19</option>
+                <option value="Z20">Z20</option>
+                <option value="Z21">Z21</option>
+                <option value="Z22">Z22</option>
+                <option value="Z23">Z23</option>
+                <option value="Z24">Z24</option>
+                <option value="Z25">Z25</option>
+            </select>
+            <select id="filter-nrw" onchange="filterAlerts()">
+                <option value="All">All NRW Types</option>
+                <option value="pipe_burst">Pipe Burst</option>
+                <option value="slow_seepage">Slow Seepage</option>
+                <option value="illegal_tap">Illegal Tap</option>
+                <option value="meter_tamper">Meter Tamper</option>
+            </select>
+            <select id="filter-urgency" onchange="filterAlerts()">
+                <option value="All">All Urgency</option>
+                <option value="HIGH">HIGH</option>
+                <option value="MEDIUM">MEDIUM</option>
+                <option value="LOW">LOW</option>
+            </select>
+            <button class="clear-btn" onclick="clearFilters()">⟳ CLEAR FILTERS</button>
+            <div class="alert-count-pill" id="alert-count-display">0 alerts shown</div>
+        </div>
+
+        <div id="alerts-body">
+            <div id="alerts-list"></div>
+
+            <div id="chart-sidebar">
+                <div class="chart-title">NRW TYPE DISTRIBUTION</div>
+                <div id="chart-canvas-wrap">
+                    <canvas id="nrw-donut"></canvas>
+                </div>
+                <div id="chart-legend-grid"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="toast" onclick="hideToast()">
+    <span class="toast-icon" id="toast-icon"></span>
+    <span id="toast-text"></span>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+//  CONSTANTS
+// ═══════════════════════════════════════════════════════════
+
+// Expanded to 25 distinct colors for the full Ahmedabad Grid!
+const ZONE_COLORS = { 
+    Z1: '#38b4f0', Z2: '#f6c94e', Z3: '#4ecb7a', Z4: '#ff8c42', Z5: '#b07ff5',
+    Z6: '#ff5252', Z7: '#42d4f4', Z8: '#bfef45', Z9: '#fabebe', Z10: '#469990',
+    Z11: '#e6beff', Z12: '#9A6324', Z13: '#fffac8', Z14: '#800000', Z15: '#aaffc3',
+    Z16: '#808000', Z17: '#ffd8b1', Z18: '#000075', Z19: '#a9a9a9', Z20: '#ffffff',
+    Z21: '#3cb44b', Z22: '#ffe119', Z23: '#4363d8', Z24: '#f58231', Z25: '#911eb4'
+}
+
+const NRW_COLORS = {
+    pipe_burst:   '#ff5252',
+    slow_seepage: '#f6c94e',
+    illegal_tap:  '#b07ff5',
+    meter_tamper: '#ff8c42',
+    none:         '#4ecb7a'
+}
+const NRW_LABELS = {
+    pipe_burst:   'PIPE BURST',
+    slow_seepage: 'SLOW SEEPAGE',
+    illegal_tap:  'ILLEGAL TAP',
+    meter_tamper: 'METER TAMPER',
+    none:         'NORMAL'
+}
+// ═══════════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════════
+let map = null
+let statsData = {}
+let liveData = []
+let alertsData = []
+let zoneSummaryData = []
+let networkTopology = null   // { zones: { ZONE_1: [...nodes], ZONE_2... ZONE_25 } }
+let nrwChart = null
+let currentPage = 'dashboard'
+let dispatchedSegments = new Set()
+let lastAlertCount = 0
+
+// Leaflet layer stores
+let pipelineLayers = {}    // segmentId → polyline layer
+let nodeLayers = {}        // segmentId → circleMarker layer
+let nodeDataMap = {}       // segmentId → { zone, lat, lon, parent_id }
+
+// ═══════════════════════════════════════════════════════════
+//  MAP INIT — uses real network topology
+// ═══════════════════════════════════════════════════════════
+async function initMap() {
+    if (map) return
+
+    // Adjusted Center & Zoom for the full Ahmedabad bounding box
+    map = L.map('map', { zoomControl: true, attributionControl: true })
+            .setView([23.050, 72.565], 12)
+
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        attribution: '© OpenStreetMap © CartoDB',
+        maxZoom: 19
+    }).addTo(map)
+
+    map.on('mousemove', e => {
+        document.getElementById('mouse-lat').textContent = e.latlng.lat.toFixed(4)
+        document.getElementById('mouse-lon').textContent = e.latlng.lng.toFixed(4)
+    })
+
+    // Load topology then draw
+    await loadNetworkTopology()
+}
+
+// ─────────────────────────────────────────────
+//  Load network topology from backend
+// ─────────────────────────────────────────────
+async function loadNetworkTopology() {
+    try {
+        const res = await fetch('http://localhost:5000/network-topology')
+        networkTopology = await res.json()
+        drawNetworkOnMap()
+        console.log('%c✅ Network topology loaded from backend', 'color:#38b4f0;font-family:monospace')
+    } catch (e) {
+        console.warn('⚠️ Could not load /network-topology — falling back to synthetic grid')
+        networkTopology = buildFallbackTopology()
+        drawNetworkOnMap()
+    }
+}
+
+// ─────────────────────────────────────────────
+//  Fallback: synthetic 25-zone grid across Ahmedabad
+// ─────────────────────────────────────────────
+function buildFallbackTopology() {
+    const zones = {}
+    let zIndex = 1
+    // Generate a quick 5x5 grid placeholder for 25 zones
+    for (let r = 0; r < 5; r++) {
+        for (let c = 0; c < 5; c++) {
+            const zoneKey = `ZONE_${zIndex}`
+            const zoneStr = `Z${zIndex}`
+            // Interpolate across Ahmedabad bounds
+            const latStart = 22.95 + r * ((23.15 - 22.95) / 4)
+            const lonStart = 72.45 + c * ((72.68 - 72.45) / 4)
+            
+            const nodes = []
+            for (let i = 0; i < 15; i++) {
+                nodes.push({
+                    id: `${zoneStr}-N${i}`,
+                    lat: latStart + i * 0.0005,
+                    lon: lonStart,
+                    parent_id: i === 0 ? null : `${zoneStr}-N${i-1}`
+                })
+            }
+            zones[zoneKey] = nodes
+            zIndex++
+        }
+    }
+    return { zones }
+}
+
+// ─────────────────────────────────────────────
+//  ZONE color helper 
+// ─────────────────────────────────────────────
+function zoneColor(zone) {
+    return ZONE_COLORS[zone] || '#00f2ff'
+}
+
+// ─────────────────────────────────────────────
+//  Build tooltip HTML
+// ─────────────────────────────────────────────
+function buildTooltip(seg) {
+    return `<div style="font-family:monospace;font-size:12px;line-height:1.6;padding:2px 4px">
+        <b>${seg.segment_id || seg.id}</b><br/>
+        Pressure: ${(seg.pressure_bar ?? 0).toFixed(2)}<br/>
+        Flow: ${(seg.flow_lpm ?? 0).toFixed(1)}<br/>
+        Loss: ${seg.estimated_loss_liters ?? 0}<br/>
+        Status: ${seg.anomaly === 1 ? '<span style="color:#ef4444;font-weight:bold">ANOMALY</span>' : '<span style="color:#4ecb7a">NORMAL</span>'}
+    </div>`
+}
+
+// ─────────────────────────────────────────────
+//  Draw tree-based pipelines + nodes on map
+// ─────────────────────────────────────────────
+function drawNetworkOnMap() {
+    if (!networkTopology || !map) return
+
+    Object.entries(networkTopology.zones).forEach(([zoneKey, nodes]) => {
+        // Dynamically replace 'ZONE_25' with 'Z25'
+        const zone = zoneKey.replace('ZONE_', 'Z')
+        const baseColor = zoneColor(zone)
+
+        // id → node lookup for parent resolution
+        const nodeById = {}
+        nodes.forEach(n => { nodeById[n.id] = n })
+
+        // Store metadata for telemetry matching later
+        nodes.forEach(n => {
+            nodeDataMap[n.id] = { zone, lat: n.lat, lon: n.lon, parent_id: n.parent_id }
+        })
+
+        // ── PIPES ──
+        nodes.forEach(node => {
+            if (!node.parent_id || !nodeById[node.parent_id]) return
+            const parent = nodeById[node.parent_id]
+
+            const poly = L.polyline(
+                [[parent.lat, parent.lon], [node.lat, node.lon]],
+                {
+                    color:     baseColor,
+                    weight:    3,
+                    opacity:   0.75,
+                    lineCap:   'round',
+                    lineJoin:  'round'
+                }
+            ).addTo(map)
+
+            poly.on('click', e => {
+                const seg = liveData.find(d => d.segment_id === node.id) || {}
+                showSegmentPopup(e, node.id, zone, seg)
+            })
+
+            pipelineLayers[node.id] = poly
+        })
+
+        // ── NODES ──
+        nodes.forEach(node => {
+            const marker = L.circleMarker([node.lat, node.lon], {
+                radius:      3,
+                color:       baseColor,
+                fillColor:   baseColor,
+                fillOpacity: 1,
+                weight:      1.5
+            }).addTo(map)
+
+            marker.bindTooltip(buildTooltip({ segment_id: node.id, pressure_bar: 0, flow_lpm: 0, estimated_loss_liters: 0, anomaly: 0 }), {
+                sticky: true,
+                direction: 'top',
+                offset: [0, -6],
+                className: 'aqua-tooltip'
+            })
+
+            marker.on('click', e => {
+                const seg = liveData.find(d => d.segment_id === node.id) || {}
+                showSegmentPopup(e, node.id, zone, seg)
+            })
+
+            nodeLayers[node.id] = marker
+        })
+    })
+
+    const total = Object.values(networkTopology.zones).reduce((a, z) => a + z.length, 0)
+    document.getElementById('map-segments').textContent = total.toLocaleString()
+    console.log(`%c✅ Drew ${total} segments (${Object.keys(pipelineLayers).length} pipes, ${Object.keys(nodeLayers).length} nodes)`, 'color:#4ecb7a;font-family:monospace')
+}
+
+// ─────────────────────────────────────────────
+//  Update map from live telemetry
+// ─────────────────────────────────────────────
+function updateMapFromLive() {
+    if (!map || !Object.keys(nodeLayers).length) return
+
+    const telemetryById = {}
+    liveData.forEach(item => { telemetryById[item.segment_id] = item })
+
+    // Reset all
+    Object.entries(nodeLayers).forEach(([segId, marker]) => {
+        const nd = nodeDataMap[segId]
+        const base = zoneColor(nd ? nd.zone : 'Z1')
+        marker.setStyle({ radius: 3, color: base, fillColor: base, fillOpacity: 1, weight: 1.5 })
+    })
+    Object.entries(pipelineLayers).forEach(([segId, poly]) => {
+        const nd = nodeDataMap[segId]
+        const base = zoneColor(nd ? nd.zone : 'Z1')
+        poly.setStyle({ color: base, weight: 3, opacity: 0.75 })
+    })
+
+    // Apply live data
+    Object.entries(nodeLayers).forEach(([segId, marker]) => {
+        const seg = telemetryById[segId]
+        if (!seg) return
+
+        const isAnomaly = seg.anomaly === 1
+
+        if (isAnomaly) {
+            marker.setStyle({
+                radius:      6,
+                color:       '#ef4444',
+                fillColor:   '#ef4444',
+                fillOpacity: 1,
+                weight:      2
+            })
+
+            if (pipelineLayers[segId]) {
+                const nrwColor = NRW_COLORS[seg.nrw_type] || '#ef4444'
+                pipelineLayers[segId].setStyle({
+                    color:   nrwColor,
+                    weight:  7,
+                    opacity: 1
+                })
+            }
+        } else {
+            const base = zoneColor(seg.zone || 'Z1')
+            marker.setStyle({ radius: 3, color: base, fillColor: base, fillOpacity: 1, weight: 1.5 })
+        }
+
+        marker.setTooltipContent(buildTooltip(seg))
+    })
+
+    liveData.forEach(item => {
+        if (item.anomaly !== 1) return
+        if (nodeLayers[item.segment_id]) return
+
+        let closest = null, minD = Infinity
+        Object.entries(nodeDataMap).forEach(([id, nd]) => {
+            const d = Math.hypot(nd.lat - item.latitude, nd.lon - item.longitude)
+            if (d < minD) { minD = d; closest = id }
+        })
+        if (!closest || minD > 0.005) return
+
+        const marker = nodeLayers[closest]
+        if (marker) {
+            marker.setStyle({ radius: 6, color: '#ef4444', fillColor: '#ef4444', fillOpacity: 1, weight: 2 })
+            marker.setTooltipContent(buildTooltip({ ...item, segment_id: closest }))
+        }
+        if (pipelineLayers[closest]) {
+            const nrwColor = NRW_COLORS[item.nrw_type] || '#ef4444'
+            pipelineLayers[closest].setStyle({ color: nrwColor, weight: 7, opacity: 1 })
+        }
+    })
+
+    const anomalyCount = liveData.filter(i => i.anomaly === 1).length
+    document.getElementById('map-anomalies').textContent = anomalyCount.toLocaleString()
+    document.getElementById('map-last-update').textContent =
+        `Updated ${new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`
+}
+
+// ─────────────────────────────────────────────
+//  Popup (click on node or pipe)
+// ─────────────────────────────────────────────
+function showSegmentPopup(e, segId, zone, item) {
+    const anomaly = item.anomaly === 1
+    const nrwType = item.nrw_type || 'none'
+    const color = NRW_COLORS[nrwType]
+    const zColor = ZONE_COLORS[zone] || '#38b4f0'
+
+    const html = `
+    <div style="font-family:'JetBrains Mono',monospace;font-size:13px;padding:20px;min-width:280px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+            <strong style="font-size:15px">${segId}</strong>
+            <span style="background:${zColor};color:#111;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700">${zone}</span>
+        </div>
+        <div style="margin-bottom:14px">
+            <span style="background:${anomaly?'var(--burst)':'var(--safe)'};color:${anomaly?'#fff':'#111'};padding:3px 12px;border-radius:20px;font-size:11px">
+                ${anomaly ? '🔴 ANOMALY' : '✅ NORMAL'}
+            </span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:12px;margin-bottom:14px">
+            <div>Pressure<br><strong style="font-size:18px">${(item.pressure_bar||0).toFixed(2)}</strong> bar</div>
+            <div>Expected<br><strong style="font-size:18px">${(item.expected_pressure_bar||3.8).toFixed(2)}</strong> bar</div>
+            <div>Flow<br><strong style="font-size:18px">${(item.flow_lpm||0).toFixed(1)}</strong> lpm</div>
+            <div>Est. Loss<br><strong style="font-size:18px">${Number(item.estimated_loss_liters||0).toLocaleString()}</strong> L/hr</div>
+        </div>
+        ${nrwType !== 'none' ? `
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+            <span style="font-size:11px;color:#93b4d8">TYPE</span>
+            <span style="background:${color};color:#111;padding:3px 12px;border-radius:20px;font-size:11px;font-weight:700">${NRW_LABELS[nrwType]||nrwType}</span>
+        </div>` : ''}
+        <div onclick="reportFalsePositive('${segId}');event.stopPropagation()"
+             style="text-align:center;padding:10px;border:1px dashed #5580a8;border-radius:14px;cursor:pointer;font-size:11px;color:#5580a8"
+             onmouseover="this.style.color='#e8265a';this.style.borderColor='#e8265a'"
+             onmouseout="this.style.color='#5580a8';this.style.borderColor='#5580a8'">
+            ⚠️ MARK AS FALSE POSITIVE
+        </div>
+    </div>`
+
+    L.popup({ className: 'custom-popup', closeButton: true, autoClose: true })
+        .setLatLng(e.latlng)
+        .setContent(html)
+        .openOn(map)
+}
+
+// ═══════════════════════════════════════════════════════════
+//  DATA FETCHING
+// ═══════════════════════════════════════════════════════════
+async function fetchAllData() {
+    const statusEl = document.getElementById('backend-status')
+    try {
+        const [statsRes, liveRes, alertsRes, zoneRes] = await Promise.all([
+            fetch('http://localhost:5000/stats'),
+            fetch('http://localhost:5000/live'),
+            fetch('http://localhost:5000/alerts'),
+            fetch('http://localhost:5000/zone-summary')
+        ])
+        statsData       = await statsRes.json()
+        liveData        = await liveRes.json()
+        alertsData      = await alertsRes.json()
+        zoneSummaryData = await zoneRes.json()
+
+        updateStatStrip()
+        updateMapFromLive()
+        updateNavBadge()
+
+        if (currentPage === 'alerts') {
+            renderZoneSummary()
+            filterAlerts()
+            updateNRWChart()
+        }
+
+        const now = new Date()
+        document.getElementById('ts-val').textContent =
+            now.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit', second:'2-digit' })
+
+        statusEl.classList.remove('show')
+    } catch (e) {
+        console.error('Backend fetch failed:', e)
+        statusEl.classList.add('show')
+    }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  STAT STRIP
+// ═══════════════════════════════════════════════════════════
+function updateStatStrip() {
+    document.getElementById('s-sensors').textContent   = (statsData.sensors_online ?? 0).toLocaleString() || '—'
+    document.getElementById('s-anomalies').textContent = (statsData.total_anomalies ?? 0).toLocaleString() || '—'
+    document.getElementById('s-zones').textContent     = statsData.active_zones ?? 25
+    document.getElementById('s-rows').textContent      = (statsData.total_rows ?? 0).toLocaleString()
+
+    const loss = statsData.total_loss_liters ?? 0
+    document.getElementById('s-loss').innerHTML =
+        `${(loss/1000).toFixed(1)}<span style="font-size:14px;color:var(--text3);margin-left:4px">K L/hr</span>`
+}
+
+// ═══════════════════════════════════════════════════════════
+//  ZONE SUMMARY (Alerts page)
+// ═══════════════════════════════════════════════════════════
+function renderZoneSummary() {
+    const totalLoss = zoneSummaryData.reduce((a, z) => a + (z.total_loss || 0), 0) || 1
+    const container = document.getElementById('zone-summary-strip')
+    container.innerHTML = zoneSummaryData.map(z => {
+        const perc = Math.round(((z.total_loss || 0) / totalLoss) * 100)
+        return `
+        <div class="zone-card">
+            <div class="zone-badge" style="background:${z.color}">${z.zone}</div>
+            <div style="flex:1">
+                <div style="display:flex;justify-content:space-between">
+                    <div class="zone-name">${z.zone}</div>
+                    <div style="font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace">${z.total_anomalies} anomalies</div>
+                </div>
+                <div class="zone-loss">${((z.total_loss||0)/1000).toFixed(1)}K L/hr</div>
+                <div class="zone-bar-wrap">
+                    <div class="zone-bar" style="width:${perc}%;background:${z.color}"></div>
+                </div>
+            </div>
+        </div>`
+    }).join('')
+}
+
+// ═══════════════════════════════════════════════════════════
+//  ALERT CARDS
+// ═══════════════════════════════════════════════════════════
+function renderAlerts(list) {
+    const container = document.getElementById('alerts-list')
+
+    if (!list || list.length === 0) {
+        container.innerHTML = `
+        <div style="height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--safe);padding:40px">
+            <div style="font-size:64px;margin-bottom:20px">🌊</div>
+            <div style="font-size:22px;font-weight:500">All Clear</div>
+            <p style="color:var(--text3);margin-top:8px">No active anomalies in the network</p>
+        </div>`
+        return
+    }
+
+    container.innerHTML = list.map(alert => {
+        const nrwColor = NRW_COLORS[alert.nrw_type] || NRW_COLORS.none
+        const zColor   = ZONE_COLORS[alert.zone] || '#38b4f0'
+        const isDisp   = dispatchedSegments.has(alert.segment_id)
+        const urgBg    = alert.urgency === 'HIGH' ? 'var(--burst)' : alert.urgency === 'MEDIUM' ? '#fbbf24' : 'var(--safe)'
+        const ts       = (alert.timestamp || '').split(' ')[1] || alert.timestamp || ''
+
+        return `
+        <div class="alert-card" style="border-color:${nrwColor}">
+            <div class="alert-header">
+                <div class="alert-id">${alert.segment_id}</div>
+                <div class="alert-tags">
+                    <span class="tag" style="background:${zColor};color:#111">${alert.zone}</span>
+                    <span class="tag" style="background:${urgBg};color:#111">${alert.urgency}</span>
+                    <span style="font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace">${ts}</span>
+                </div>
+            </div>
+            <div class="alert-meta">
+                <span class="nrw-badge" style="background:${nrwColor}">${NRW_LABELS[alert.nrw_type] || alert.nrw_type}</span>
+                <span class="sensor-id">${alert.sensor_id || ''}</span>
+                ${alert.demand_peak_flag === 1 ? '<span class="peak-flag">⚡ PEAK DEMAND</span>' : ''}
+            </div>
+            <div class="alert-grid">
+                <div>
+                    <div class="alert-metric-label">PRESSURE</div>
+                    <div class="alert-metric-val">${alert.pressure_bar.toFixed(2)} <span class="alert-metric-unit">bar</span></div>
+                </div>
+                <div>
+                    <div class="alert-metric-label">EXPECTED</div>
+                    <div class="alert-metric-val">${alert.expected_pressure_bar.toFixed(2)} <span class="alert-metric-unit">bar</span></div>
+                </div>
+                <div>
+                    <div class="alert-metric-label">FLOW</div>
+                    <div class="alert-metric-val">${alert.flow_lpm.toFixed(1)} <span class="alert-metric-unit">lpm</span></div>
+                </div>
+                <div>
+                    <div class="alert-metric-label">LOSS</div>
+                    <div class="alert-metric-val">${Number(alert.estimated_loss_liters).toLocaleString()} <span class="alert-metric-unit">L/hr</span></div>
+                </div>
+            </div>
+            <button class="dispatch-btn ${isDisp ? 'done' : 'pending'}"
+                    ${isDisp ? 'disabled' : ''}
+                    onclick="dispatchAlert(this,'${alert.segment_id}','${alert.zone}','${alert.nrw_type}','${alert.urgency}',${alert.estimated_loss_liters},${alert.latitude},${alert.longitude})">
+                ${isDisp ? '✅ DISPATCHED — WO#' + (alert.work_order_id || 'XXXXXX') : '📲 SEND WHATSAPP ALERT'}
+            </button>
+        </div>`
+    }).join('')
+}
+
+// ═══════════════════════════════════════════════════════════
+//  FILTERS
+// ═══════════════════════════════════════════════════════════
+function filterAlerts() {
+    const zoneF = document.getElementById('filter-zone').value
+    const nrwF  = document.getElementById('filter-nrw').value
+    const urgF  = document.getElementById('filter-urgency').value
+
+    let filtered = alertsData
+    if (zoneF !== 'All') filtered = filtered.filter(a => a.zone === zoneF)
+    if (nrwF  !== 'All') filtered = filtered.filter(a => a.nrw_type === nrwF)
+    if (urgF  !== 'All') filtered = filtered.filter(a => a.urgency === urgF)
+
+    document.getElementById('alert-count-display').textContent = `${filtered.length} alerts shown`
+    renderAlerts(filtered)
+}
+
+function clearFilters() {
+    document.getElementById('filter-zone').value    = 'All'
+    document.getElementById('filter-nrw').value     = 'All'
+    document.getElementById('filter-urgency').value = 'All'
+    filterAlerts()
+}
+
+// ═══════════════════════════════════════════════════════════
+//  NRW DONUT CHART
+// ═══════════════════════════════════════════════════════════
+function updateNRWChart() {
+    const breakdown = statsData.nrw_breakdown || {}
+    const labels = [], values = [], colors = []
+    Object.entries(breakdown).forEach(([k, v]) => {
+        if (NRW_LABELS[k]) {
+            labels.push(NRW_LABELS[k])
+            values.push(v)
+            colors.push(NRW_COLORS[k])
+        }
+    })
+
+    const ctx = document.getElementById('nrw-donut')
+    if (!ctx) return
+    if (nrwChart) nrwChart.destroy()
+
+    nrwChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels,
+            datasets: [{ data: values, backgroundColor: colors, borderColor: '#0f2040', borderWidth: 5 }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '78%',
+            plugins: { legend: { display: false } }
+        }
+    })
+
+    document.getElementById('chart-legend-grid').innerHTML = labels.map((l, i) => `
+        <div class="chart-legend-item">
+            <div class="chart-legend-dot" style="background:${colors[i]}"></div>
+            <span>${l}</span>
+            <span style="margin-left:auto;font-family:'JetBrains Mono',monospace">${values[i]}</span>
+        </div>`).join('')
+}
+
+// ═══════════════════════════════════════════════════════════
+//  DISPATCH
+// ═══════════════════════════════════════════════════════════
+async function dispatchAlert(btn, segId, zone, nrwType, urgency, loss, lat, lon) {
+    btn.innerHTML = `<span style="display:inline-block;width:16px;height:16px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin 0.7s linear infinite;margin-right:8px"></span>SENDING...`
+    btn.disabled = true
+
+    try {
+        const res = await fetch('http://localhost:5000/dispatch', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ zone, segment_id: segId, nrw_type: nrwType, urgency, estimated_loss_liters: loss, latitude: lat, longitude: lon })
+        })
+        const json = await res.json()
+        if (json.success) {
+            dispatchedSegments.add(segId)
+            btn.innerHTML = `✅ Dispatched — WO #${json.work_order_id}`
+            btn.classList.remove('pending'); btn.classList.add('done')
+            showToast('📲', `Work order #${json.work_order_id} sent to crew`, true)
+        } else throw new Error(json.error || 'Failed')
+    } catch (err) {
+        btn.innerHTML = `✗ Failed — Retry`
+        btn.style.background = '#f43f5e'
+        setTimeout(() => {
+            btn.innerHTML = '📲 SEND WHATSAPP ALERT'
+            btn.disabled = false; btn.style.background = ''
+        }, 2800)
+        showToast('⚠️', 'Dispatch failed — Twilio error', false)
+    }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  FALSE POSITIVE
+// ═══════════════════════════════════════════════════════════
+async function reportFalsePositive(segId) {
+    try {
+        await fetch('http://localhost:5000/false-positive', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ segment_id: segId })
+        })
+        showToast('✅', `Segment ${segId} marked false positive`, true)
+    } catch {
+        showToast('❌', 'Failed to mark false positive', false)
+    }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  NAVIGATION
+// ═══════════════════════════════════════════════════════════
+function navigateTo(page) {
+    currentPage = page
+    document.getElementById('page-dashboard').style.display = page === 'dashboard' ? 'flex' : 'none'
+    document.getElementById('page-alerts').style.display    = page === 'alerts'    ? 'flex' : 'none'
+    document.getElementById('page-title').textContent       = page === 'dashboard' ? 'Dashboard' : 'Alerts & Reports'
+
+    document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'))
+    const active = document.getElementById('nav-' + page)
+    if (active) active.classList.add('active')
+
+    if (page === 'alerts') {
+        renderZoneSummary()
+        filterAlerts()
+        updateNRWChart()
+    }
+    if (page === 'dashboard' && map) {
+        setTimeout(() => map.invalidateSize(), 100)
+    }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  ALERT BADGE
+// ═══════════════════════════════════════════════════════════
+function updateNavBadge() {
+    const count = alertsData.length
+    const badge = document.getElementById('alert-badge')
+    badge.textContent = count
+    badge.style.display = count > 0 ? '' : 'none'
+    if (count > lastAlertCount && lastAlertCount > 0) {
+        badge.style.animation = 'none'
+        setTimeout(() => badge.style.animation = '', 10)
+    }
+    lastAlertCount = count
+}
+
+// ═══════════════════════════════════════════════════════════
+//  TOAST
+// ═══════════════════════════════════════════════════════════
+let toastTimer = null
+function showToast(icon, msg, success) {
+    const el = document.getElementById('toast')
+    document.getElementById('toast-icon').textContent = icon
+    document.getElementById('toast-text').textContent = msg
+    el.style.borderColor = success ? 'var(--safe)' : 'var(--burst)'
+    el.classList.add('show')
+    clearTimeout(toastTimer)
+    toastTimer = setTimeout(hideToast, 4000)
+}
+function hideToast() { document.getElementById('toast').classList.remove('show') }
+
+// ═══════════════════════════════════════════════════════════
+//  CLOCK
+// ═══════════════════════════════════════════════════════════
+function startClock() {
+    setInterval(() => {
+        document.getElementById('live-clock').textContent =
+            new Date().toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit',second:'2-digit'})
+    }, 1000)
+}
+
+// ═══════════════════════════════════════════════════════════
+//  SPIN KEYFRAME (for dispatch button)
+// ═══════════════════════════════════════════════════════════
+const spinStyle = document.createElement('style')
+spinStyle.textContent = '@keyframes spin{to{transform:rotate(360deg)}}'
+document.head.appendChild(spinStyle)
+
+// ═══════════════════════════════════════════════════════════
+//  BOOTSTRAP
+// ═══════════════════════════════════════════════════════════
+window.addEventListener('load', async () => {
+    // Set initial page visibility
+    document.getElementById('page-dashboard').style.display = 'flex'
+    document.getElementById('page-alerts').style.display    = 'none'
+    document.getElementById('page-dashboard').style.flexDirection = 'column'
+
+    startClock()
+    await initMap()
+    await fetchAllData()
+
+    // Poll every 10 seconds (aligned with IoT simulator interval)
+    setInterval(fetchAllData, 10000)
+
+    console.log('%c🚀 AquaWatch ready — polling every 10s (IoT aligned)', 'background:#e8265a;color:#fff;padding:2px 6px;border-radius:3px')
+})
+</script>
+</body>
+</html>
